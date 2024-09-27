@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "nugulbotproject",
+  "private_key_id": "b41195cbf552c84bdea4028fb3afb28c8b911c54",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDxTCqpbkqu8c21\nH77Ft+EQx2Yb3ZkHkmyhSDh14a5UkrOhaPFQqIKbdUVjVTa2YDRdU2UOJ+Mld/tL\nbMvY7U9/7zPiSk91GHUAXuVz/LIx7YxitfaorWf4uh40zvlvc6tRlu6Xjdlnk4BG\nI8cG1TIBAcjKHTArHPo57EX4g0TE20chHTLyxOu2c7tjx0Cu9OWAheSTHmDEpyU2\nIPQVT5hCOx8VG2o26TZ60K5KPq2oFyVJyvtCXA/we1DIZIiJYacFUknGNc0eX0xH\ndKQ/vQgQjtagGV6oNxT5bFc/Rnx4rjkAOgmog4IGl6MZu4GMG17HfYOv3/UC301x\nVIUjhR/xAgMBAAECggEABHmdli82ZX6UqoP2ZFl13Cs9iZ1jTNqWZwqVSPrksjr3\nB8Kf7Jd2diJ/dSFXwpu/xt4Qwwmidt+99mrz8B/NFFXj6gHHrdfUdit8YQl+Bsrl\nelBufNf79FcDz8YJpltwYULNxZvm7PrFY4+e7aGTNAVz40s1qSwIOD4peUuacTXo\naIAuGCoNwXOGz2x/8tx9mYdbdksYEgTYV9VinGA5ytDgQ+JBcxWZnMc26v12yWk6\ncjYkfUlnyNK1DMDlQXmQacQt/GVeB8L5AHJ2zFEfsehOoubOL72fVGwa947LYUhU\nLa0BsTOfimRw7YkSSHeWdWrSE0zWOu86Wn7l7U/doQKBgQD6gtgoVsQqX8PVsC2E\nbAd8YK3L5sSDubiiNlpvqoy0XnG4ZgZHjS+wu62wmxgt2BudyPmqCWZNC3J3KniS\nBkQsS2lZLGWfz2E4Y9Wq2gziUQn11pDAeQ+9qUAiEOmZMll6msN28vhB2+MTSU47\nZSVM20lLVNY8nJtZiI0NIp1aYQKBgQD2laRQxEeloJv27jUEre/haa1DQNrzrJOu\n1kmCt2+5Zp1MP6HDCLSfnPkdUEoMriJ/mrSoDcqHaUFgbKJVtw8FyWkkttuG1gPN\nHDGfOwbh6FOzjSLrtdkr8QzcfMB/5ZI9rYy3ZI76SgNcGQofI6Gw+2b4BizSf8k6\n6ICcMyFPkQKBgDtTAR2MbqgaRaY1MpJJgvxRaNcAr0kCklbXyFLpcKjGNOgWQSZw\nqPqRd3B7Sh6RLvkOvxElaLSWIWVXCXaLRVm4Ahq8CNTvp3ZTLiZnvOVbi6BMT7tE\n8BVaH3Xxy2AcLFR8kg15PJFcIUpP8dbe/RZWV+UfEh0IeUGatMyHhfwBAoGAUVaX\nNxUn1RifmdqFnp+Jiz+CqbaRAuQgawHAid/ceLnClU5AG8eZXTU4b1T2uCwQsSrl\nALJb5kLwD9CF0+Roji4cAsJWs6mQ422zaKTd5lLumUGrDTmVA4umBG0aSpX9oV7I\nFg6Tozga15xi3FaylWC4XIQc8Oq6BDaBhgTPriECgYEAg4a3yjySZRLH2mS21A3G\n/15EolfrRBl8aiUAqrz7GG0EjlnjRSSQmbaHirqua6vwh78gOoMZ4UDLwcOCL9G/\nwINoP86BbV+MHMthOv+EzklXO0D0dnGZvw+HtrBgTnXT/4PWepAbCw6ubFH5b41A\naHd35Oqv/a4awvWvCk680r4=\n-----END PRIVATE KEY-----\n",
+  "client_email": "nugulbot@nugulbotproject.iam.gserviceaccount.com",
+  "client_id": "113285416233573839368",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/nugulbot%40nugulbotproject.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

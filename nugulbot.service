@@ -1,0 +1,13 @@
+[Unit]
+Description=Nugulbot Service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/nugulbot/nugulbotSource
+ExecStart=/bin/bash -c 'source /home/ubuntu/nugulbot/nugulbot/bin/activate && exec python3 /home/ubuntu/nugulbot/nugulbotSource/main.py'
+Restart=always
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
