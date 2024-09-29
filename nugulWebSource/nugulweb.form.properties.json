@@ -1,0 +1,48 @@
+{
+    "admin" : {
+        "item_crud" : {
+            "form" : {
+                "item_name" : {
+                    "required" : true,
+                    "input_type" : "text_input"
+                },
+                "item_price" : {
+                    "required" : true,
+                    "input_type" : "number_input"
+                },
+                "item_description": {
+                    "required" : true,
+                    "input_type" :"text_area" 
+                },
+                "item_type" : {
+                    "required" : true,
+                    "input_type" : "selectbox",
+                    "item_type_options" : [
+                        "ROLEPLAY", "HEAL", "BUFF", "RANDOM"
+                    ]
+                },
+                "item_photo" : {
+                    "input_type" : "file_uploader",
+                    "accept_multiple_files" : false,
+                    "file_type" : ["png", "jpg"]
+                }
+            }
+        },
+        "create_update_reward" : {
+            "form" : {
+                "reward_name" : {
+                    "required" : true,
+                    "input_type" : "text_input"
+                },
+                "reward_money" : {
+                    "required" : true,
+                    "input_type" : "number_input"
+                },
+                "reward_description": {
+                    "required" : true,
+                    "input_type" :"text_area" 
+                }
+            }
+        }
+    }
+}

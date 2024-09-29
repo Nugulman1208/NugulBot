@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
 from mongodb_manager import MongoDBManager  # MongoDBManager 클래스 파일을 불러옵니다.
 from bson import ObjectId
+from typing import Optional
 
 # FastAPI 인스턴스 생성
 app = FastAPI()
@@ -44,7 +45,7 @@ class RegisterUser(BaseModel):
     password: str
     is_admin: bool
     comu_id: str  # 변경된 필드명
-    photo: str
+    photo : Optional[str] = None
 
 # 회원가입 API 엔드포인트
 @app.post("/register")
@@ -82,44 +83,56 @@ async def login_user(form_data: LoginForm):
     # comu_id와 username으로 유저 검색
     user = await db_manager.find_one_document(session, "users", {"username": form_data.username, "comu_id": form_data.comu_id})
 
-    print(user)
     # 유저가 없거나 비밀번호가 맞지 않으면 에러 반환
     if not user or not pwd_context.verify(form_data.password, user['password']):
         raise HTTPException(status_code=400, detail="Invalid credentials")
     
     # JWT 토큰 생성
     access_token = create_access_token(data={"sub": user["username"]})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "is_admin" : user.get("is_admin")}
 
 # 판매 아이템 데이터 모델
 class Item(BaseModel):
-    name: str
-    description: str
-    price: float
-    quantity: int
+    item_name: str
+    item_description: str
+    item_price: int
+    item_type: str
+    item_photo : Optional[str] = None
+    comu_id : str
 
 # 1. 판매 아이템 생성
 @app.post("/items")
 async def create_item(item: Item):
     item_data = item.dict()
+    print("생성 아이템 :")
+    print(item_data)
+
     session = None
     item_id = await db_manager.create_one_document(session, "items", item_data)
     return {"message": "Item created successfully", "item_id": str(item_id)}
 
+def serialize_item(item):
+    item['_id'] = str(item['_id'])  # ObjectId를 문자열로 변환
+    return item
+
 # 2. 판매 아이템 목록 조회
 @app.get("/items")
-async def get_items():
+async def get_items(comu_id : str = None):
+    print(comu_id)
     session = None
-    items = await db_manager.find_documents(session, "items", {})
-    return {"items": items}
+    items = await db_manager.find_documents(session, "items", {"comu_id" : comu_id})
+    serialized_items = [serialize_item(item) for item in items]
+    return {"items": serialized_items}
 
 # 3. 특정 판매 아이템 수정
 @app.put("/items/{item_id}")
 async def update_item(item_id: str, item: Item):
     session = None
     item_data = item.dict()
-    result = await db_manager.update_document(session, "items", {"_id": ObjectId(item_id)}, item_data)
-    if result[0] == 0:
+    document = await db_manager.find_one_document(session, "items", {"_id": ObjectId(item_id)})
+    if document:
+        result = await db_manager.update_one_document(session, "items", {"_id": ObjectId(item_id)}, item_data)
+    else:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item updated successfully"}
 
@@ -127,7 +140,7 @@ async def update_item(item_id: str, item: Item):
 @app.delete("/items/{item_id}")
 async def delete_item(item_id: str):
     session = None
-    result = await db_manager.remove_document(session, "items", {"_id": ObjectId(item_id)})
+    result = await db_manager.remove_one_document(session, "items", {"_id": ObjectId(item_id)})
     if result == 0:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted successfully"}
