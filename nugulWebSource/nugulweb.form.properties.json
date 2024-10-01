@@ -8,7 +8,8 @@
                 },
                 "item_price" : {
                     "required" : true,
-                    "input_type" : "number_input"
+                    "input_type" : "number_input",
+                    "min_value" : 0
                 },
                 "item_description": {
                     "required" : true,
@@ -36,11 +37,23 @@
                 },
                 "reward_money" : {
                     "required" : true,
-                    "input_type" : "number_input"
+                    "input_type" : "number_input",
+                    "min_value" : 0
                 },
                 "reward_description": {
                     "required" : true,
                     "input_type" :"text_area" 
+                }
+            }
+        }
+    },
+    "user" : {
+        "give_reward" : {
+            "form" : {
+                "reward_count" : {
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 1
                 }
             }
         }

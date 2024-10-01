@@ -25,6 +25,10 @@ def get_properties(message: dict, path: str):
 
     return result
 
+message = load_properties("nugulweb.message.json")
+form_properties = load_properties("nugulweb.form.properties.json")
+table_properties = load_properties("nugulweb.table.properties.json")
+
 def rendering_form(message : dict, form_properties : dict,   path : str, send_list : dict, value_dict : dict = {}):
     key_list = path.split('.')
     result = form_properties
@@ -39,35 +43,118 @@ def rendering_form(message : dict, form_properties : dict,   path : str, send_li
         return None
 
     send_list = dict()
-    for item_name in result:
-        label = get_properties(message, path+"."+item_name)
-        properties = result[item_name]
-        value = value_dict.get(item_name) or None
 
-        if properties['input_type'] == 'text_input':
-            send_list[item_name] = st.text_input(label, value = value)
-        if properties['input_type'] == 'checkbox':
-            send_list[item_name] = st.checkbox(label, value = value)
-        if properties['input_type'] == "file_uploader":
-            file_type = properties.get('file_type', ["png", "jpg"])
-            accept_multiple_files = properties.get("accept_multiple_files", False)
+    with st.form(key="form"):
+        for item_name in result:
+            label = get_properties(message, path+"."+item_name)
+            properties = result[item_name]
+            value = value_dict.get(item_name) or None
 
-            if value == None:
-                send_list[item_name] = st.file_uploader(label, type = file_type, accept_multiple_files = accept_multiple_files)
+            if properties['input_type'] == 'text_input':
+                send_list[item_name] = st.text_input(label, value = value)
+            if properties['input_type'] == 'checkbox':
+                send_list[item_name] = st.checkbox(label, value = value)
+            if properties['input_type'] == "file_uploader":
+                file_type = properties.get('file_type', ["png", "jpg"])
+                accept_multiple_files = properties.get("accept_multiple_files", False)
 
-        if properties['input_type'] == "selectbox":
-            item_type_options = properties.get("item_type_options", [])
+                if value == None:
+                    send_list[item_name] = st.file_uploader(label, type = file_type, accept_multiple_files = accept_multiple_files)
 
-            send_list[item_name] = st.selectbox(label, item_type_options,  index=item_type_options.index(value) if value in item_type_options else 0)
-        
-        if properties['input_type'] == "number_input":
-            min_value = properties.get("number_input", 0)
-            send_list[item_name] = st.number_input(label, min_value = min_value, value =value)
+            if properties['input_type'] == "selectbox":
+                item_type_options = properties.get("item_type_options", [])
 
-        if properties['input_type'] == "text_area":
-            send_list[item_name] = st.text_area(label, value = value)
+                send_list[item_name] = st.selectbox(label, item_type_options,  index=item_type_options.index(value) if value in item_type_options else 0)
+            
+            if properties['input_type'] == "number_input":
+                min_value = properties.get("min_value", 0)
+                send_list[item_name] = st.number_input(label, min_value = min_value, value =value)
+
+            if properties['input_type'] == "text_area":
+                send_list[item_name] = st.text_area(label, value = value)
+        send_list['submit_button'] = st.form_submit_button(use_container_width=True)
     
     return send_list
+
+def rendering_data_editor(message : dict, table_properties : dict,  path : str, value_df : pd.DataFrame):
+    key_list = path.split('.')
+    tp = table_properties
+
+    for k in key_list:
+        if isinstance(tp, dict) and k in tp:
+            tp = tp[k]
+        else:
+            return None
+
+    if isinstance(tp, dict) == False:
+        return None
+
+    column_config = dict()
+    show_col_list = list()
+
+    for item_name in tp:
+        show_col_list.append(item_name)
+
+        label = get_properties(message, path+"."+item_name)
+        properties = tp[item_name]
+        col_type = properties.get('column_type', "text")
+
+        width = properties.get('width', "small")
+        if width not in ["small", "medium", "large"]:
+            width  = "small"
+        required = properties.get('required', False)
+        if not isinstance(required, bool):
+            required = False
+
+        disabled = properties.get('disabled', True)
+        if not isinstance(disabled, bool):
+            disabled = True
+
+        if col_type == "text":
+            column_config[item_name] = st.column_config.TextColumn(
+                label = label,
+                width = width,
+                required = required,
+                disabled = disabled
+            )
+        elif col_type == "number":
+            max_value = properties.get('max_value', None)
+            min_value = properties.get('min_value', None)
+
+            if not isinstance(max_value, int) or max_value is not None:
+                max_value = None
+            if not isinstance(min_value, int) or min_value is not None:
+                min_value = 0
+
+            column_config[item_name] = st.column_config.NumberColumn(
+                label = label,
+                width = width,
+                required = required,
+                disabled = disabled,
+                min_value = min_value,
+                max_value = max_value
+            )
+        elif col_type == "checkbox":
+            column_config[item_name] = st.column_config.CheckboxColumn(
+                label = label,
+                width = width,
+                required = required,
+                disabled = disabled
+            )
+    for none_col in value_df.columns:
+         if none_col not in show_col_list:
+            column_config[none_col] = None
+
+    edited_df = st.data_editor(
+        value_df,
+        use_container_width=True,
+        hide_index =True, 
+        column_config = column_config
+    )
+
+    return edited_df
+
+
     
 def validate(form_properties : dict, path : str, send_dict : dict):
     key_list = path.split('.')
@@ -84,12 +171,21 @@ def validate(form_properties : dict, path : str, send_dict : dict):
 
     for item_name in result:
         required = result.get(item_name, {}).get("required", False)
+        min_value =  result.get(item_name, {}).get("min_value", None)
+        max_value =  result.get(item_name, {}).get("max_value", None)
+
         if required:
             value = send_dict.get(item_name, "")
             if value == None:
                 return False
             if isinstance(value, str) and str(value).strip() == "":
                 return False
+            elif isinstance(value, int):
+                if min_value and value < min_value:
+                    return False
+                if max_value and value > max_value:
+                    return False
+
 
     return True
 
@@ -100,8 +196,6 @@ def show_message(message, msg_type):
     elif msg_type == "error":
         st.error(message)
 
-message = load_properties("nugulweb.message.json")
-form_properties = load_properties("nugulweb.form.properties.json")
 
 # 회원가입 페이지
 def register():
@@ -163,15 +257,23 @@ def login():
             st.session_state['access_token'] = token_data['access_token']
             st.session_state['is_admin'] = token_data['is_admin']
             st.session_state['comu_id'] = comu_id
+            st.session_state['username'] = username
             st.session_state['login_status'] = True  # 로그인 상태 저장
             st.session_state['current_page'] = 'item_crud'  # 현재 페이지 설정
             st.rerun()  # 페이지 리프레시
         else:
             st.error("Invalid username or password")
 
+def logout():
+    st.session_state.clear()  # 모든 세션 상태 제거
+    st.session_state['current_page'] = 'login'  # 로그인 페이지로 돌아가기
+    st.rerun()
+
 # API 요청 처리 함수
 def make_api_request(endpoint, data=None, method='GET'):
     headers = {}
+
+    data = {key: value for key, value in data.items() if key != "submit_button"}
     
     # 세션 상태에서 토큰 가져오기
     if 'access_token' in st.session_state:
@@ -203,6 +305,7 @@ def make_api_request(endpoint, data=None, method='GET'):
 
 # 아이템 CRUD 페이지 (관리자 전용)
 def item_crud():
+    st.session_state['current_page'] = 'item_crud'
     st.title(get_properties(message, 'admin.item_crud.title'))
 
     if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
@@ -214,16 +317,18 @@ def item_crud():
     comu_id = st.session_state.get('comu_id')
     items = make_api_request("items", data={"comu_id": comu_id})  # 특정 comu_id에 따른 아이템 요청
 
+    col1, col2 = st.columns([1,1])
+    with col1:
+        submit_button = st.button("CREATE/UPDATE", key="create_update_button", use_container_width=True)
+    with col2:
+        delete_button = st.button("DELETE", key="delete_button",use_container_width=True)
+
     if items is not None and 'items' in items.keys():
         items_df = pd.DataFrame(items['items'])
 
         items_df.insert(0, 'selected', False)
 
-        col1, col2 = st.columns([1,1])
-        with col1:
-            submit_button = st.button("CREATE/UPDATE", key="create_update_button", use_container_width=True)
-        with col2:
-            delete_button = st.button("DELETE", key="delete_button",use_container_width=True)
+        
             
         edited_df = st.data_editor(items_df, use_container_width=True, hide_index =True, column_config = {
             "_id" : None,
@@ -272,11 +377,11 @@ def item_crud():
                     st.rerun()
                 else:
                     show_message(get_properties(message, "error.admin.item_crud.delete"), "error")
-            
-
+        
 
 
 def create_update_item():
+    st.session_state['current_page'] = 'create_update_item'
     # 새 아이템 추가
     item_selected = st.session_state.get('selected_item') or {}
 
@@ -298,7 +403,7 @@ def create_update_item():
         send_dict['_id'] = item_selected.get("_id", "").strip()
     
 
-    submit_button = st.button("submit", key="submit_button", use_container_width=True)
+    submit_button = send_dict['submit_button']
 
     if back_button:
         st.session_state['current_page'] = 'item_crud'
@@ -336,6 +441,7 @@ def create_update_item():
                     st.rerun()
                 else:
                     show_message(get_properties(message, "error.admin.item_crud.create"), "error")
+
             
 
 def buy_item():
@@ -356,10 +462,151 @@ def buy_item():
         item = items[i]
         with cols[i % 3]:
             with st.expander(label=item['item_name'], expanded=True):
-                st.image(item["item_photo"])
+                if item["item_photo"]:
+                    st.image(item["item_photo"])
                 buy_button = st.button(label="아이템 구매", key=i, use_container_width=True)
 
+
+
+@st.dialog(get_properties(message, 'user.give_reward.title'))
+def give_reward_popup(_id : str):
+    send_dict = dict()
+
+    send_dict = rendering_form(message, form_properties, "user.give_reward.form", send_dict)
+    comu_id = st.session_state.get('comu_id')
+    username = st.session_state.get('username')
+
+    if send_dict['submit_button']:
+        if not validate(form_properties, "user.give_reward.form", send_dict):
+            st.error(get_properties(message, "error.user.give_reward.required"))
+
+        else:
+            send_dict['reward_id'] = _id
+            send_dict['slip_type'] = "reward"
+            send_dict['comu_id'] = comu_id
+            send_dict['username'] = username
+
+            response = make_api_request(f"slip", data=send_dict, method="POST")
+            if response:
+                st.session_state['current_page'] = 'give_reward'
+                st.session_state['selected_item'] = None
+                st.session_state['prior_message'] = get_properties(message, "success.user.give_reward_popup.create_slip")
+                st.session_state['prior_status'] = "success"
+                st.rerun()
+            else:
+                st.session_state['current_page'] = 'give_reward'
+                st.session_state['selected_item'] = None
+                st.session_state['prior_message'] = get_properties(message, "error.user.give_reward_popup.create_slip")
+                st.session_state['prior_status'] = "error"
+                st.rerun()
+
+
+    return send_dict
+
+def give_reward():
+    st.session_state['current_page'] = 'give_reward'
+    st.title(get_properties(message, 'user.give_reward.title'))
+
+    if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
+        show_message(st.session_state['prior_message'], st.session_state['prior_status'])
+        st.session_state['prior_message'] = None
+        st.session_state['prior_status'] = None
+
+    # 아이템 목록 보기
+    comu_id = st.session_state.get('comu_id')
+    reward_list = make_api_request("reward", data={"comu_id": comu_id})  # 특정 comu_id에 따른 아이템 요청
+
+    if reward_list is not None and 'reward' in reward_list.keys():
+        reward_list = reward_list['reward']
+        for idx, reward in enumerate(reward_list):
+            with st.container(border=True):
+                st.write(f"{reward.get('reward_name')} / {reward.get('reward_money')}")
+                st.write(reward.get('reward_description'))
+
+                submit_button = st.button(get_properties(message, 'user.give_reward.button.submit'), key = idx, use_container_width=True)
+
+                if submit_button:
+                    give_reward_popup(reward.get('_id'))
+
+            
+
+
+
+
+
+
+# admin Reward
+def read_delete_reward():
+    st.session_state['current_page'] = 'read_delete_reward'
+    st.title(get_properties(message, 'admin.read_delete_reward.title'))
+    
+    if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
+        show_message(st.session_state['prior_message'], st.session_state['prior_status'])
+        st.session_state['prior_message'] = None
+        st.session_state['prior_status'] = None
+
+    # 아이템 목록 보기
+    comu_id = st.session_state.get('comu_id')
+    reward_list = make_api_request("reward", data={"comu_id": comu_id})  # 특정 comu_id에 따른 아이템 요청
+
+    col1, col2 = st.columns([1,1])
+    with col1:
+        submit_button = st.button("CREATE/UPDATE", key="create_update_button", use_container_width=True)
+    with col2:
+        delete_button = st.button("DELETE", key="delete_button",use_container_width=True)
+
+    if reward_list is not None and 'reward' in reward_list.keys():
+        reward_df = pd.DataFrame(reward_list['reward'])
+
+        reward_df.insert(0, 'selected', False)
+
+        edited_df = rendering_data_editor(message, table_properties, "admin.read_delete_reward.table", reward_df)
+
+        selected_reward = edited_df[edited_df['selected']]  # 선택된 행만 필터링
+        selected_reward = selected_reward.to_dict(orient='records')
+
+    if submit_button:
+        if len(selected_reward) == 0:
+            st.session_state['current_page'] = 'create_update_reward'
+            st.session_state['selected_reward'] = None
+            st.rerun()
+        elif len(selected_reward) == 1:
+            st.session_state['current_page'] = 'create_update_reward'
+            st.session_state['selected_reward'] = selected_reward[0]
+            st.rerun()
+        else:
+            st.error(get_properties(message, "error.admin.read_delete_reward.create_update_selected"))
+
+
+    if delete_button:
+        delete_flag = True
+        if len(selected_reward) == 0:
+            show_message(get_properties(message, "error.admin.read_delete_reward.delete_selected"), "error")
+        else:
+            for reward in selected_reward:
+                _id = reward.get('_id', None)
+                if _id:
+                    response = make_api_request(f"reward/{_id}", data=reward, method='DELETE')
+                    if response == None:
+                        delete_flag = False
+                        break
+                else:
+                    delete_flag = False
+            
+            if delete_flag:
+                st.session_state['prior_message'] = get_properties(message, "success.admin.read_delete_reward.delete")
+                st.session_state['prior_status'] = "success"
+                st.rerun()
+            else:
+                show_message(get_properties(message, "error.admin.read_delete_reward.delete"), "error")
+
+
+            
+
+
 def create_update_reward():
+    st.session_state['current_page'] = 'create_update_reward'
+
     reward_selected = st.session_state.get('selected_reward') or {}
 
     col1, col2 = st.columns([6.6, 1])
@@ -372,6 +619,47 @@ def create_update_reward():
         back_button = st.button(get_properties(message, 'common.button.back'), key="back_button")
 
     send_dict = rendering_form(message, form_properties, "admin.create_update_reward.form", {}, reward_selected)
+    comu_id = st.session_state.get('comu_id') or None
+        
+    send_dict['comu_id'] = comu_id
+    if reward_selected.get("_id", None):
+        send_dict['_id'] = reward_selected.get("_id", "").strip()
+
+    submit_button = send_dict['submit_button']
+
+    if back_button:
+        st.session_state['current_page'] = 'read_delete_reward'
+        st.session_state['selected_item'] = None
+        st.rerun()
+
+    if submit_button:
+        if validate(form_properties, "admin.create_update_reward.form", send_dict) == False:
+            st.error(get_properties(message, "error.admin.create_update_reward.required"))
+        else:
+            if send_dict.get('_id', None):
+                response = make_api_request(f"reward/{send_dict['_id']}", data=send_dict, method='PUT')
+                if response:
+                    st.session_state['current_page'] = 'read_delete_reward'
+                    st.session_state['selected_item'] = None
+                    st.session_state['prior_message'] = get_properties(message, "success.admin.create_update_reward.update")
+                    st.session_state['prior_status'] = "success"
+                    st.rerun()
+                else:
+                    show_message(get_properties(message, "error.admin.create_update_reward.update"), "error")
+            else:
+                response = make_api_request("reward", data=send_dict, method='POST')
+                if response:
+                    st.session_state['current_page'] = 'read_delete_reward'
+                    st.session_state['selected_item'] = None
+                    st.session_state['prior_message'] = get_properties(message, "success.admin.create_update_reward.create")
+                    st.session_state['prior_status'] = "success"
+                    st.rerun()
+                else:
+                    show_message(get_properties(message, "error.admin.create_update_reward.create"), "error")
+
+
+    
+
 
 
 
@@ -396,7 +684,7 @@ def main():
             register()
     elif st.session_state.get("is_admin", False) == True:
         options = st.sidebar.radio(get_properties(message, 'main.sidebar.radio.title'), 
-                                    [get_properties(message, 'admin.item_crud.title'), get_properties(message, 'admin.create_update_reward.title')])
+                                    [get_properties(message, 'admin.item_crud.title'), get_properties(message, 'admin.create_update_reward.title'), get_properties(message, 'common.menu.logout')])
         
         if options == get_properties(message, 'admin.item_crud.title'):
             if st.session_state['current_page'] != 'create_update_item':
@@ -404,13 +692,23 @@ def main():
             else:
                 create_update_item()
         elif options == get_properties(message, 'admin.create_update_reward.title'):
-            create_update_reward()
+            if st.session_state['current_page'] != 'create_update_reward':
+                read_delete_reward()  # 로그인 후 아이템 CRUD 페이지 표시
+            else:
+                create_update_reward()
+    
+        elif options == get_properties(message, 'common.menu.logout'):
+            logout()
     else:
         options = st.sidebar.radio(get_properties(message, 'main.sidebar.radio.title'), 
-                                    ["아이템 구매"])
+                                    ["아이템 구매", get_properties(message, 'user.give_reward.title')])
         
         if options == "아이템 구매":
             buy_item()
+        elif options == get_properties(message, 'user.give_reward.title'):
+            give_reward()
+        elif options == get_properties(message, 'common.menu.logout'):
+            logout()
         
 if __name__ == "__main__":
     main()

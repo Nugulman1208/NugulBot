@@ -145,4 +145,120 @@ async def delete_item(item_id: str):
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted successfully"}
 
+# Admin : Reward Start
+# 보상 데이터 모델
+class Reward(BaseModel):
+    reward_name : str
+    reward_description : str
+    reward_money : int
+    comu_id : str
+
+# 1. 보상 생성
+@app.post("/reward")
+async def create_reward(reward: Reward):
+    reward_data = reward.dict()
+
+    session = None
+    reward_id = await db_manager.create_one_document(session, "reward", reward_data)
+    return {"message": "Item created successfully", "reward_id": str(reward_id)}
+
+# 2. 보상 목록 조회
+@app.get("/reward")
+async def get_reward(comu_id : str = None):
+    session = None
+    rewards = await db_manager.find_documents(session, "reward", {"comu_id" : comu_id})
+    serialized_reward = [serialize_item(reward) for reward in rewards]
+    return {"reward": serialized_reward}
+
+# 3. 특정 판매 아이템 수정
+@app.put("/reward/{reward_id}")
+async def update_reward(reward_id: str, reward: Reward):
+    session = None
+    reward_data = reward.dict()
+    document = await db_manager.find_one_document(session, "reward", {"_id": ObjectId(reward_id)})
+    if document:
+        result = await db_manager.update_one_document(session, "reward", {"_id": ObjectId(reward_id)}, reward_data)
+    else:
+        raise HTTPException(status_code=404, detail="Reward not found")
+    return {"message": "Item updated successfully"}
+
+# 전표 생성 (적립)
+class Slip(BaseModel):
+    comu_id : str
+    username : str
+    slip_type : str
+    slip_description : Optional[str] = None
+    reward_id :  Optional[str] = None
+    reward_count : Optional[int] = None
+    money_change : Optional[int] = None
+
+# POST 엔드포인트
+@app.post("/slip")
+async def create_slip(slip: Slip):
+    session = None  # 세션이 필요하면 세션을 전달하세요
+    slip_data = slip.dict()
+
+    comu_id = slip_data["comu_id"]
+    username = slip_data["username"]
+    slip_type = slip_data["slip_type"]
+
+    # 사용자 조회
+    user = await db_manager.find_one_document(session, "users", {"username": username, "comu_id": comu_id})
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    result = None
+
+    if slip_type == "reward":
+        reward_id = slip_data.get("reward_id")
+        if not reward_id:
+            raise HTTPException(status_code=400, detail="Reward ID is required for reward slip")
+
+        # 보상 정보 조회
+        reward = await db_manager.find_one_document(session, "reward", {"_id": ObjectId(reward_id)})
+        if reward is None:
+            raise HTTPException(status_code=404, detail="Reward not found")
+
+        reward_money = reward.get('reward_money', 0)
+        reward_count = slip_data.get("reward_count", 1)
+        reward_name = reward.get('reward_name', 0)
+        slip_description = f"적립({reward_name}) x {reward_count}"
+        slip_data['slip_description'] = slip_description
+        slip_data['money_change'] = reward_money * reward_count
+        before_money = user.get("money", 0)
+        after_money = before_money + slip_data['money_change']
+        slip_data['before_money'] = before_money
+        slip_data['after_money'] = after_money
+        slip_data['reward_money'] = reward_money
+
+        # 유저 돈 업데이트
+        count, _id = await db_manager.update_inc_documents(
+            session, 
+            "users", 
+            {"username": username, "comu_id": comu_id}, 
+            {"money": slip_data.get('money_change', 0)}
+        )
+
+        
+        if count == 0:
+            raise HTTPException(status_code=404, detail="User not found or update failed")
+
+        # slip 기록 생성
+        result = await db_manager.create_one_document(session, "slip", slip_data)
+
+    return {"message": "Slip created successfully", "slip_id": str(result) if result else None}
+
+
+
+
+
+# 4. 판매 아이템 삭제
+@app.delete("/reward/{reward_id}")
+async def delete_reward(reward_id: str):
+    session = None
+    result = await db_manager.remove_one_document(session, "reward", {"_id": ObjectId(reward_id)})
+    if result == 0:
+        raise HTTPException(status_code=404, detail="Reward not found")
+    return {"message": "Reward deleted successfully"}
+
 # 로그아웃은 클라이언트 측에서 처리됩니다.

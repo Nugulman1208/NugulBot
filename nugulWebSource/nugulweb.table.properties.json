@@ -1,0 +1,26 @@
+{
+    "admin" : {
+        "read_delete_reward" : {
+            "table" : {
+                "selected" : {
+                    "disabled" : false,
+                    "column_type" : "checkbox",
+                    "width" : "small"
+                },
+                "reward_name" : {
+                    "disabled" : true,
+                    "column_type" : "text"
+                },
+                "reward_money" : {
+                    "disabled" : true,
+                    "column_type" : "number"
+                },
+                "reward_description": {
+                    "disabled" : true,
+                    "column_type" :"text",
+                    "width" : "large"
+                }
+            }
+        }
+    }
+}
