@@ -19,13 +19,17 @@
                     "required" : true,
                     "input_type" : "selectbox",
                     "item_type_options" : [
-                        "ROLEPLAY", "HEAL", "BUFF", "RANDOM"
+                        "ROLEPLAY", "HEAL", "BUFF", "DEBUFF", "STURN", "RANDOM"
                     ]
                 },
                 "item_photo" : {
                     "input_type" : "file_uploader",
                     "accept_multiple_files" : false,
                     "file_type" : ["png", "jpg"]
+                },
+                "item_formula" : {
+                    "required" : false,
+                    "input_type" : "text_input"
                 }
             }
         },
@@ -51,6 +55,15 @@
         "give_reward" : {
             "form" : {
                 "reward_count" : {
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 1
+                }
+            }
+        },
+        "buy_item" : {
+            "form" : {
+                "item_count" : {
                     "required" : true,
                     "input_type" : "number_input",
                     "min_value" : 1

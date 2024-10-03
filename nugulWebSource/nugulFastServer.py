@@ -1,6 +1,8 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import PyMongoError
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
@@ -12,9 +14,35 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from mongodb_manager import MongoDBManager  # MongoDBManager 클래스 파일을 불러옵니다.
 from bson import ObjectId
 from typing import Optional
+import json
+from datetime import datetime
+import pytz
+
+
 
 # FastAPI 인스턴스 생성
 app = FastAPI()
+
+def load_properties(json_name: str):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    messages_path = os.path.join(base_dir, json_name)
+    with open(messages_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+def get_properties(message: dict, path: str):
+    message_key = path.split('.')
+    result = message
+
+    for k in message_key:
+        if isinstance(result, dict) and k in result:
+            result = result[k]
+        else:
+            return None
+
+    return result
+
+message = load_properties("nugulweb.message.json")
+
 
 # MongoDB Manager 인스턴스 생성 (MongoDB URI와 데이터베이스 이름 설정)
 MONGO_URI = "mongodb+srv://quietromance1122:1234@nugulbot.xhbdnfk.mongodb.net/?retryWrites=true&w=majority&appName=Nugulbot"
@@ -97,6 +125,7 @@ class Item(BaseModel):
     item_description: str
     item_price: int
     item_type: str
+    item_formula : Optional[str] = None
     item_photo : Optional[str] = None
     comu_id : str
 
@@ -104,8 +133,6 @@ class Item(BaseModel):
 @app.post("/items")
 async def create_item(item: Item):
     item_data = item.dict()
-    print("생성 아이템 :")
-    print(item_data)
 
     session = None
     item_id = await db_manager.create_one_document(session, "items", item_data)
@@ -118,7 +145,6 @@ def serialize_item(item):
 # 2. 판매 아이템 목록 조회
 @app.get("/items")
 async def get_items(comu_id : str = None):
-    print(comu_id)
     session = None
     items = await db_manager.find_documents(session, "items", {"comu_id" : comu_id})
     serialized_items = [serialize_item(item) for item in items]
@@ -190,66 +216,160 @@ class Slip(BaseModel):
     slip_description : Optional[str] = None
     reward_id :  Optional[str] = None
     reward_count : Optional[int] = None
+    item_id :  Optional[str] = None
+    item_count : Optional[int] = None
     money_change : Optional[int] = None
 
-# POST 엔드포인트
 @app.post("/slip")
 async def create_slip(slip: Slip):
-    session = None  # 세션이 필요하면 세션을 전달하세요
+    session = await db_manager.client.start_session()
     slip_data = slip.dict()
 
     comu_id = slip_data["comu_id"]
     username = slip_data["username"]
     slip_type = slip_data["slip_type"]
+    kst = pytz.timezone('Asia/Seoul')
+    current_time = datetime.now(kst).strftime("%Y%m%d%H%M%S")
 
-    # 사용자 조회
+    try:
+        # 트랜잭션 시작
+        session.start_transaction()
+
+        # 사용자 조회
+        user = await db_manager.find_one_document(session, "users", {"username": username, "comu_id": comu_id})
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        result = None
+
+        if slip_type == "reward":
+            reward_id = slip_data.get("reward_id")
+            if not reward_id:
+                raise HTTPException(status_code=400, detail="Reward ID is required for reward slip")
+
+            # 보상 정보 조회
+            reward = await db_manager.find_one_document(session, "reward", {"_id": ObjectId(reward_id)})
+            if reward is None:
+                raise HTTPException(status_code=404, detail="Reward not found")
+
+            reward_money = reward.get('reward_money', 0)
+            reward_count = slip_data.get("reward_count", 1)
+            reward_name = reward.get('reward_name', '')
+            slip_description = f"적립({reward_name}) x {reward_count}"
+            slip_data['slip_description'] = slip_description
+            slip_data['money_change'] = reward_money * reward_count
+            before_money = user.get("money", 0)
+            after_money = before_money + slip_data['money_change']
+            slip_data['before_money'] = before_money
+            slip_data['after_money'] = after_money
+            slip_data['reward_money'] = reward_money
+            slip_data['add_time'] = current_time
+
+            # 유저 돈 업데이트
+            count, _id = await db_manager.update_inc_documents(
+                session, 
+                "users", 
+                {"username": username, "comu_id": comu_id}, 
+                {"money": slip_data.get('money_change', 0)}
+            )
+
+            if count == 0:
+                await session.abort_transaction()
+                raise HTTPException(status_code=404, detail="User not found or update failed")
+
+            # slip 기록 생성
+            result = await db_manager.create_one_document(session, "slip", slip_data)
+        
+        elif slip_type == "buy":
+            item_id = slip_data.get("item_id")
+            if not item_id:
+                raise HTTPException(status_code=400, detail="Item ID is required for buy slip")
+
+            item = await db_manager.find_one_document(session, "items", {"_id": ObjectId(item_id)})
+            if item is None:
+                raise HTTPException(status_code=404, detail="Item not found")
+
+            before_money = user.get("money", 0)
+            slip_data['money_change'] = item.get('item_price', 0) * slip_data.get('item_count', 0) * -1
+            after_money = before_money + slip_data['money_change']
+
+            if after_money < 0:
+                await session.abort_transaction()
+                return {"message": get_properties(message, "error.user.buy_item.no_money"), "status" : "no_money"}
+
+            slip_description = f"구매({item.get('item_name')}) x {slip_data.get('item_count')}"
+            slip_data['slip_description'] = slip_description
+            slip_data['before_money'] = before_money
+            slip_data['after_money'] = after_money
+            slip_data['add_time'] = current_time
+
+            # 유저 돈 업데이트
+            count, _id = await db_manager.update_inc_documents(
+                session, 
+                "users", 
+                {"username": username, "comu_id": comu_id}, 
+                {"money": slip_data.get('money_change', 0)}
+            )
+
+            if count == 0:
+                await session.abort_transaction()
+                raise HTTPException(status_code=404, detail="User not found or update failed")
+
+            # 인벤토리에 넣기
+            inventory_item = item
+            inventory_item.pop("_id")
+            inventory_item['username'] = username
+            inventory_item['comu_id'] = comu_id
+
+            for _ in range(slip_data.get('item_count', 0)):
+                inv_id = await db_manager.create_one_document(session, "inventory", inventory_item)
+
+                if not inv_id:
+                    await session.abort_transaction()
+                    raise HTTPException(status_code=404, detail="Inventory create failed")
+
+            # slip 기록 생성
+            result = await db_manager.create_one_document(session, "slip", slip_data)
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "Slip created successfully", "slip_id": str(result) if result else None, "status" : "success"}
+
+
+
+# 2. 인벤토리 목록 조회
+@app.get("/inventory")
+async def get_inventory(comu_id : str = None, username : str = None):
+    session = None
+    
     user = await db_manager.find_one_document(session, "users", {"username": username, "comu_id": comu_id})
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    inventory = await db_manager.find_documents(session, "inventory", {"comu_id" : comu_id, "username" : username})
 
-    result = None
+    serialized_inventory = [serialize_item(inv) for inv in inventory]
+    return {"inventory": serialized_inventory, "money" : user.get("money", 0)}
 
-    if slip_type == "reward":
-        reward_id = slip_data.get("reward_id")
-        if not reward_id:
-            raise HTTPException(status_code=400, detail="Reward ID is required for reward slip")
+# 3. 전표 목록 조회
+@app.get("/slip")
+async def get_slip(comu_id : str = None, username : str = None):
+    session = None
+    
+    user = await db_manager.find_one_document(session, "users", {"username": username, "comu_id": comu_id})
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    slip = await db_manager.find_documents(session, "slip", {"comu_id" : comu_id, "username" : username})
 
-        # 보상 정보 조회
-        reward = await db_manager.find_one_document(session, "reward", {"_id": ObjectId(reward_id)})
-        if reward is None:
-            raise HTTPException(status_code=404, detail="Reward not found")
-
-        reward_money = reward.get('reward_money', 0)
-        reward_count = slip_data.get("reward_count", 1)
-        reward_name = reward.get('reward_name', 0)
-        slip_description = f"적립({reward_name}) x {reward_count}"
-        slip_data['slip_description'] = slip_description
-        slip_data['money_change'] = reward_money * reward_count
-        before_money = user.get("money", 0)
-        after_money = before_money + slip_data['money_change']
-        slip_data['before_money'] = before_money
-        slip_data['after_money'] = after_money
-        slip_data['reward_money'] = reward_money
-
-        # 유저 돈 업데이트
-        count, _id = await db_manager.update_inc_documents(
-            session, 
-            "users", 
-            {"username": username, "comu_id": comu_id}, 
-            {"money": slip_data.get('money_change', 0)}
-        )
-
-        
-        if count == 0:
-            raise HTTPException(status_code=404, detail="User not found or update failed")
-
-        # slip 기록 생성
-        result = await db_manager.create_one_document(session, "slip", slip_data)
-
-    return {"message": "Slip created successfully", "slip_id": str(result) if result else None}
-
-
-
+    serialized_slip = [serialize_item(s) for s in slip]
+    return {"slip": serialized_slip}
 
 
 # 4. 판매 아이템 삭제

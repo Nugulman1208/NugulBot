@@ -52,6 +52,7 @@
                 "item_price" : "아이템 가격",
                 "item_description" : "아이템 설명",
                 "item_type" : "아이템 타입",
+                "item_formula" : "배틀 사용 시 아이템 계산",
                 "item_photo" : "아이템 사진(수정불가)"
             },
             "button" : {
@@ -63,7 +64,8 @@
                 "item_price" : "아이템 가격",
                 "item_description" : "아이템 설명",
                 "item_type" : "아이템 타입",
-                "item_photo" : "아이템 사진"
+                "item_photo" : "아이템 사진",
+                "item_formula" : "아이템 공식"
             }
         },
         "create_update_reward" : {
@@ -98,6 +100,35 @@
             "form" : {
                 "reward_count" : "적립 횟수를 적어주세요."
             }
+        },
+        "buy_item" : {
+            "title" : "아이템 구매",
+            "button" : {
+                "buy" : "구매"
+            },
+            "form" : {
+                "item_count" : "구매할 아이템의 개수를 적어주세요."
+            }
+        },
+        "read_inventory" : {
+            "title" : "인벤토리",
+            "subheader" : "보유 재화 : {0} 페니",
+            "table" : {
+                "selected" : "선택",
+                "item_name" : "아이템 이름",
+                "item_description" : "아이템 설명"
+            }
+        },
+        "read_slip" : {
+            "title" : "전표 목록",
+            "table" : {
+                "slip_type" : "속성",
+                "add_time" : "시간",
+                "slip_description" : "내용",
+                "before_money" : "이전 자산",
+                "after_money" : "결과 자산",
+                "money_change" : "자산 변동"
+            }
         }
     },
     "error" : {
@@ -111,7 +142,8 @@
                 "delete_selected" : "삭제할 아이템을 선택해주세요.",
                 "delete" : "아이템 삭제에 실패했습니다. 관리자에게 문의 바랍니다.",
                 "update" : "아이템 수정에 실패했습니다. 관리자에게 문의 바랍니다.",
-                "create" : "아이템 생성에 실패했습니다. 관리자에게 문의 바랍니다."
+                "create" : "아이템 생성에 실패했습니다. 관리자에게 문의 바랍니다.",
+                "item_formula" : "아이템 계산식 사용시 RESULT 로 시작해야 합니다.\n예시 1: 공격이 2배로 증가 → RESULT * 2\n예시 2: HP 30 회복 → RESULT + 30"
             },
             "read_delete_reward" : {
                 "create_update_selected" : "수정의 경우 한개의 아이템만 선택해주세요. \n새 보상을 추가할 경우 선택을 모두 해제해주세요.",
@@ -130,7 +162,11 @@
             },
             "give_reward_popup" : {
                 "create_slip" : "적립에 실패했습니다."
-            } 
+            } ,
+            "buy_item" : {
+                "required" : "필수 칼럼 값이 입력되지 않았습니다.",
+                "no_money" : "돈이 부족합니다. 다시 확인해주세요."
+            }
         }
     },
     "success" : {
@@ -151,7 +187,10 @@
         "user" : {
             "give_reward_popup" : {
                 "create_slip" : "적립에 성공했습니다."
-            } 
+            } ,
+            "buy_item" : {
+                "create_slip" : "아이템 구매에 성공했습니다."
+            }
         }
     }
 }

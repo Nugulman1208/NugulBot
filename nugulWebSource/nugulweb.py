@@ -141,6 +141,8 @@ def rendering_data_editor(message : dict, table_properties : dict,  path : str, 
                 required = required,
                 disabled = disabled
             )
+        elif col_type == "photo":
+            column_config[item_name] = st.column_config.ImageColumn(label=label,width=width),
     for none_col in value_df.columns:
          if none_col not in show_col_list:
             column_config[none_col] = None
@@ -338,8 +340,9 @@ def item_crud():
             "item_type" : get_properties(message, "admin.item_crud.data_editor.item_type"),
             "item_photo" : st.column_config.ImageColumn(label=get_properties(message, "admin.item_crud.data_editor.item_photo"),width="small", help=None),
             "comu_id" : None,
-            "selected": st.column_config.CheckboxColumn(label=get_properties(message, "admin.item_crud.data_editor.selected"), width="small")  # 체크박스 컬럼
-        }, disabled = ['_id', "item_name", "item_description", "item_price", "item_type", "item_photo", "comu_id"])
+            "selected": st.column_config.CheckboxColumn(label=get_properties(message, "admin.item_crud.data_editor.selected"), width="small"),  # 체크박스 컬럼
+            "item_formula" : get_properties(message, "admin.item_crud.data_editor.item_formula"),
+        }, disabled = ['_id', "item_name", "item_description", "item_price", "item_type", "item_photo", "comu_id", "item_formula"])
 
         selected_items = edited_df[edited_df['selected']]  # 선택된 행만 필터링
         selected_items = selected_items.to_dict(orient='records')
@@ -413,6 +416,8 @@ def create_update_item():
     if submit_button:
         if validate(form_properties, "admin.item_crud.form", send_dict) == False:
             st.error(get_properties(message, "error.admin.item_crud.required"))
+        elif send_dict.get('item_formula', '') and send_dict.get('item_formula', '').strip() and not send_dict['item_formula'].startswith('RESULT'):
+            st.error(get_properties(message, "error.admin.item_crud.item_formula"))
         else:
             if send_dict.get("item_photo", None):
                 photo_bytes = send_dict["item_photo"].read()
@@ -442,10 +447,49 @@ def create_update_item():
                 else:
                     show_message(get_properties(message, "error.admin.item_crud.create"), "error")
 
-            
+@st.dialog(get_properties(message, 'user.buy_item.title'))
+def buy_item_popup(item : dict):
+    send_dict = dict()
+
+    send_dict = rendering_form(message, form_properties, "user.buy_item.form", send_dict)
+    comu_id = st.session_state.get('comu_id')
+    username = st.session_state.get('username')
+
+    if send_dict['submit_button']:
+        if not validate(form_properties, "user.buy_item.form", send_dict):
+            st.error(get_properties(message, "error.user.buy_item.required"))
+        else:
+            send_dict['slip_type'] = "buy"
+            send_dict['comu_id'] = comu_id
+            send_dict['username'] = username
+            send_dict['item_id'] = item.get('_id') 
+
+            response = make_api_request(f"slip", data=send_dict, method="POST")
+            if response:
+                if response['status'] != "success":
+                    st.session_state['current_page'] = 'buy_item'
+                    st.session_state['selected_item'] = None
+                    st.session_state['prior_message'] = response['message']
+                    st.session_state['prior_status'] = "error"
+                    st.rerun()
+                else:
+                    st.session_state['current_page'] = 'buy_item'
+                    st.session_state['selected_item'] = None
+                    st.session_state['prior_message'] = get_properties(message, "success.user.buy_item.create_slip")
+                    st.session_state['prior_status'] = "success"
+                    st.rerun()
+            else:
+                st.session_state['current_page'] = 'buy_item'
+                st.session_state['selected_item'] = None
+                st.session_state['prior_message'] = get_properties(message, "error.user.buy_item.create_slip")
+                st.session_state['prior_status'] = "error"
+                st.rerun()
+
+
+
 
 def buy_item():
-    st.title("아이템 구매")
+    st.title(get_properties(message, 'user.buy_item.title'))
 
     if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
         show_message(st.session_state['prior_message'], st.session_state['prior_status'])
@@ -461,10 +505,15 @@ def buy_item():
     for i in range(len(items)):
         item = items[i]
         with cols[i % 3]:
-            with st.expander(label=item['item_name'], expanded=True):
+            with st.expander(label=f"{item['item_name']} / {item['item_price']}", expanded=False):
                 if item["item_photo"]:
                     st.image(item["item_photo"])
-                buy_button = st.button(label="아이템 구매", key=i, use_container_width=True)
+
+                st.write(item.get('item_description'))
+
+                buy_button = st.button(label=get_properties(message, 'user.buy_item.button.buy'), key=i, use_container_width=True)
+                if buy_button:
+                    buy_item_popup(item)
 
 
 
@@ -660,6 +709,78 @@ def create_update_reward():
 
     
 
+def read_inventory():
+    st.session_state['current_page'] = 'read_inventory'
+    base_path = "user.read_inventory."
+    comu_id = st.session_state.get('comu_id')
+    username  = st.session_state.get('username')
+
+    if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
+        show_message(st.session_state['prior_message'], st.session_state['prior_status'])
+        st.session_state['prior_message'] = None
+        st.session_state['prior_status'] = None
+
+    # 인벤토리 목록 보기
+    inventory_list = make_api_request("inventory", data={"comu_id": comu_id, "username" : username}) 
+
+    st.title(f"{username}의 " + get_properties(message, base_path + "title"))
+    st.subheader(get_properties(message, base_path + "subheader").format(str(inventory_list.get("money", 0))))
+
+    if inventory_list is not None and 'inventory' in inventory_list.keys():
+        cols = st.columns(3)
+        inventory = inventory_list['inventory']
+        for i in range(len(inventory)):
+            item = inventory[i]
+            with cols[i % 3]:
+                with st.expander(label=f"{item['item_name']}", expanded=False):
+                    if item["item_photo"]:
+                        st.image(item["item_photo"])
+
+                    st.write(item.get('item_description'))
+
+                    subcol1, subcol2 = st.columns(2)
+                    with subcol1:
+                        use_button = st.button("사용", key = str(i)+"use", use_container_width=True)
+                    with subcol2:
+                        transfer_button = st.button("양도", key = str(i)+"transfer", use_container_width=True)
+
+def read_slip():
+    st.session_state['current_page'] = 'read_slip'
+    base_path = "user.read_slip."
+    comu_id = st.session_state.get('comu_id')
+    username  = st.session_state.get('username')
+
+    if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
+        show_message(st.session_state['prior_message'], st.session_state['prior_status'])
+        st.session_state['prior_message'] = None
+        st.session_state['prior_status'] = None
+
+    slip_list = make_api_request("slip", data={"comu_id": comu_id, "username" : username}) 
+
+    st.title(f"{username}의 " + get_properties(message, base_path + "title"))
+
+    if slip_list is not None and 'slip' in slip_list.keys():
+        slip_list = slip_list['slip']
+
+        for idx, slip in enumerate(slip_list):
+            with st.container(border=True):
+                add_time = slip['add_time']
+                add_time = f"{add_time[:4]}/{add_time[4:6]}/{add_time[6:8]} {add_time[8:10]}:{add_time[10:12]}"
+                slip_type = slip['slip_type']
+                if slip_type == "reward":
+                    slip_type = "적립"
+                elif slip_type == "buy":
+                    slip_type = "구매"
+                st.write(f"[{slip_type}][{add_time}]")
+                st.write(slip.get('slip_description'))
+                st.write(f"자산 변경 : {slip['before_money']} → {slip['after_money']} ({slip['money_change']})")
+
+
+
+
+
+
+
 
 
 
@@ -701,14 +822,24 @@ def main():
             logout()
     else:
         options = st.sidebar.radio(get_properties(message, 'main.sidebar.radio.title'), 
-                                    ["아이템 구매", get_properties(message, 'user.give_reward.title')])
+                                    [get_properties(message, 'user.buy_item.title'),
+                                    get_properties(message, 'user.give_reward.title'),
+                                    get_properties(message, "user.read_inventory.title"),
+                                    get_properties(message, "user.read_slip.title"),
+                                    get_properties(message, 'common.menu.logout')
+                                    
+                                    ])
         
-        if options == "아이템 구매":
+        if options == get_properties(message, 'user.buy_item.title'):
             buy_item()
         elif options == get_properties(message, 'user.give_reward.title'):
             give_reward()
         elif options == get_properties(message, 'common.menu.logout'):
             logout()
+        elif options == get_properties(message, "user.read_inventory.title"):
+            read_inventory()
+        elif options == get_properties(message, "user.read_slip.title"):
+            read_slip()
         
 if __name__ == "__main__":
     main()
