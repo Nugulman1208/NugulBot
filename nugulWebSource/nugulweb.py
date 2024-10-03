@@ -5,8 +5,6 @@ import json
 import pandas as pd 
 import base64
 
-sys.path.append(os.getcwd())
-
 load_dotenv()
 
 API_URL = os.environ.get('API_URL')
