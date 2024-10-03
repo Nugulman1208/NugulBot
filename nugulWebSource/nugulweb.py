@@ -5,9 +5,8 @@ import json
 import pandas as pd 
 import base64
 
-load_dotenv()
 
-API_URL = os.environ.get('API_URL')
+API_URL = st.secrets["API_URL"]
 
 
 def load_properties(json_name: str):
