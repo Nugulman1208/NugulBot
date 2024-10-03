@@ -5,7 +5,11 @@ import json
 import pandas as pd 
 import base64
 
-API_URL = "http://localhost:8000"
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv()
+
+API_URL = os.environ.get('API_URL')
+
 
 def load_properties(json_name: str):
     base_dir = os.path.dirname(os.path.abspath(__file__))
