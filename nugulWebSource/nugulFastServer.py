@@ -75,6 +75,18 @@ class RegisterUser(BaseModel):
     comu_id: str  # 변경된 필드명
     photo : Optional[str] = None
 
+@app.get("/users")
+async def get_users(comu_id : str):
+    session = None
+    users = await db_manager.find_documents(session, "users", {"comu_id": comu_id, "is_admin" : False})
+
+    for user in users:
+        user.pop("password")
+
+    serialized_dict = [serialize_item(user) for user in users]
+    return {"users": serialized_dict}
+    
+
 # 회원가입 API 엔드포인트
 @app.post("/register")
 async def register_user(user: RegisterUser):
@@ -139,7 +151,9 @@ async def create_item(item: Item):
     return {"message": "Item created successfully", "item_id": str(item_id)}
 
 def serialize_item(item):
-    item['_id'] = str(item['_id'])  # ObjectId를 문자열로 변환
+    for idx in item.keys():
+        if isinstance(item[idx], ObjectId):
+            item[idx] = str(item[idx])
     return item
 
 # 2. 판매 아이템 목록 조회
@@ -219,6 +233,8 @@ class Slip(BaseModel):
     item_id :  Optional[str] = None
     item_count : Optional[int] = None
     money_change : Optional[int] = None
+    username_to : Optional[str] = None
+    inventory_id : Optional[str] = None
 
 @app.post("/slip")
 async def create_slip(slip: Slip):
@@ -311,17 +327,20 @@ async def create_slip(slip: Slip):
                 {"money": slip_data.get('money_change', 0)}
             )
 
+            
+
             if count == 0:
                 await session.abort_transaction()
                 raise HTTPException(status_code=404, detail="User not found or update failed")
 
             # 인벤토리에 넣기
-            inventory_item = item
-            inventory_item.pop("_id")
-            inventory_item['username'] = username
-            inventory_item['comu_id'] = comu_id
-
             for _ in range(slip_data.get('item_count', 0)):
+                inventory_item = item.copy()
+                inventory_item['item_id'] = inventory_item.get("_id")
+                inventory_item.pop("_id", None)
+                inventory_item['username'] = username
+                inventory_item['comu_id'] = comu_id
+
                 inv_id = await db_manager.create_one_document(session, "inventory", inventory_item)
 
                 if not inv_id:
@@ -331,11 +350,54 @@ async def create_slip(slip: Slip):
             # slip 기록 생성
             result = await db_manager.create_one_document(session, "slip", slip_data)
 
+        elif slip_type == "transfer":
+            inventory = await db_manager.find_one_document(session, "inventory", {"_id" : ObjectId(slip_data.get("inventory_id", ""))})
+
+            if not inventory:
+                raise HTTPException(status_code=400, detail="Inventory Not Found")
+
+            item_id = inventory.get("item_id")
+            
+            if not item_id:
+                raise HTTPException(status_code=400, detail="Item ID is required for buy slip")
+
+            item = await db_manager.find_one_document(session, "items", {"_id": ObjectId(item_id)})
+            if item is None:
+                raise HTTPException(status_code=404, detail="Item not found")
+
+            user_from = user
+            user_to = await db_manager.find_one_document(session, "users", {"username": slip_data.get("username_to", ""), "comu_id": comu_id})
+            if user_to is None:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            slip_data["username_from"] = user_from.get("username")
+            slip_data["slip_description"] = f"아이템({item.get("item_name")}) 양도 ({user_from.get("username")} → {user_to.get("username")})"
+            slip_data['before_money'] = user_from.get("money")
+            slip_data['after_money'] = user_from.get("money")
+            slip_data['money_change'] = 0
+            slip_data['add_time'] = current_time
+
+            result = await db_manager.update_one_document(session, "inventory", {"_id": ObjectId(slip_data.get("inventory_id", ""))}, {
+                "username" : user_to.get("username")
+            })
+
+            if not result:
+                raise HTTPException(status_code=404, detail="Cannot update inventory")
+
+            result = await db_manager.create_one_document(session, "slip", slip_data)
+
+            another_slip_data = slip_data.copy()
+            another_slip_data['username'] = user_to.get("username")
+            another_slip_data.pop("_id", None)
+
+            result = await db_manager.create_one_document(session, "slip", another_slip_data)
+            
         # 트랜잭션 커밋
         await session.commit_transaction()
 
     except Exception as e:
         await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
         raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
 
     finally:

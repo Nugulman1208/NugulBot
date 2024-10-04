@@ -740,11 +740,64 @@ def read_inventory():
 
                     st.write(item.get('item_description'))
 
-                    subcol1, subcol2 = st.columns(2)
-                    with subcol1:
-                        use_button = st.button("사용", key = str(i)+"use", use_container_width=True)
-                    with subcol2:
-                        transfer_button = st.button("양도", key = str(i)+"transfer", use_container_width=True)
+                    use_button = st.button("사용", key = str(i)+"use", use_container_width=True)
+                    transfer_button = st.button("양도", key = str(i)+"transfer", use_container_width=True)
+
+                    if transfer_button:
+                        read_inventory_popup(item.get("_id"))
+
+@st.dialog(get_properties(message, 'user.read_inventory.title'))
+def read_inventory_popup(inventory_id : str):
+    send_dict = dict()
+    comu_id = st.session_state.get('comu_id')
+    username = st.session_state.get('username')
+
+    response = make_api_request("users", data={
+        "comu_id" : comu_id
+    }, method='GET')
+
+    if not response:
+        st.error(get_properties(message, 'error.user.read_inventory.user_list'))
+
+
+    if response is not None and 'users' in response.keys():
+        username_list = [user.get("username") for user in response['users']]
+
+        with st.form(key="form"):
+            option = st.selectbox(
+                get_properties(message, 'user.read_inventory.form.username_to'),
+                username_list
+            )
+
+            if st.form_submit_button(use_container_width=True):
+                if not option:
+                    st.error(get_properties(message, "error.user.read_inventory.required"))
+
+                else:
+                    send_dict['comu_id'] = comu_id
+                    send_dict['username'] =  username
+                    send_dict['slip_type'] =  "transfer"
+                    send_dict['username_to'] = option
+                    send_dict['inventory_id'] =  inventory_id
+
+                    response = make_api_request(f"slip", data=send_dict, method='POST')
+                    if response:
+                        st.session_state['current_page'] = 'read_inventory'
+                        st.session_state['selected_item'] = None
+                        st.session_state['prior_message'] = get_properties(message, "success.user.read_inventory.create_slip")
+                        st.session_state['prior_status'] = "success"
+                        st.rerun()
+                    else:
+                        st.session_state['current_page'] = 'read_inventory'
+                        st.session_state['selected_item'] = None
+                        st.session_state['prior_message'] = get_properties(message, "error.user.read_inventory.create_slip")
+                        st.session_state['prior_status'] = "error"
+                        st.rerun()
+
+
+    
+
+                        
 
 def read_slip():
     st.session_state['current_page'] = 'read_slip'

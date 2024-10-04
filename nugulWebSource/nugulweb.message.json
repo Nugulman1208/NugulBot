@@ -117,6 +117,9 @@
                 "selected" : "선택",
                 "item_name" : "아이템 이름",
                 "item_description" : "아이템 설명"
+            },
+            "form" : {
+                "username_to" : "양도할 사람"
             }
         },
         "read_slip" : {
@@ -166,6 +169,11 @@
             "buy_item" : {
                 "required" : "필수 칼럼 값이 입력되지 않았습니다.",
                 "no_money" : "돈이 부족합니다. 다시 확인해주세요."
+            },
+            "read_inventory" : {
+                "user_list" : "유저 정보들을 불러오는데 실패했습니다.",
+                "required" : "필수 칼럼 값이 입력되지 않았습니다.",
+                "create_slip" : "아이템 양도에 실패했습니다. 관리자에게 문의 바랍니다."
             }
         }
     },
@@ -190,6 +198,9 @@
             } ,
             "buy_item" : {
                 "create_slip" : "아이템 구매에 성공했습니다."
+            },
+            "read_inventory" : {
+                "create_slip" : "아이템 양도에 성공했습니다."
             }
         }
     }
