@@ -113,7 +113,7 @@ async def register_user(user: RegisterUser):
 
     calculated_id = ""
     if not user.is_admin:
-        calculated_id = await db_manager.create_one_document(session, "users", {
+        calculated_id = await db_manager.create_one_document(session, "user_calculate", {
             "username": user.username,
             "photo": user.photo,
             "comu_id": user.comu_id,
