@@ -49,6 +49,40 @@
                     "input_type" :"text_area" 
                 }
             }
+        },
+        "create_update_monster" : {
+            "form" : {
+                "monster_name" : {
+                    "required" : true,
+                    "input_type" : "text_input"
+                },
+                "max_hp" : {
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 1
+                },
+                "pure_atk" : {
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 1
+                },
+                "pure_def" : {
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 1
+                },
+                "pure_heal" : {
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 1
+                },
+                "pure_acc" : {
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 1,
+                    "max_value" : 100
+                }
+            }
         }
     },
     "user" : {

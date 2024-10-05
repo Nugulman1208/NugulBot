@@ -110,7 +110,21 @@ async def register_user(user: RegisterUser):
 
     # 유저 저장
     user_id = await db_manager.create_one_document(session, "users", user_data)
-    return {"message": "User registered successfully", "user_id": str(user_id)}
+
+    calculated_id = ""
+    if not user.is_admin:
+        calculated_id = await db_manager.create_one_document(session, "users", {
+            "username": user.username,
+            "photo": user.photo,
+            "comu_id": user.comu_id,
+            "max_hp" : 100,
+            "pure_atk" : 5,
+            "pure_def" : 5,
+            "pure_heal" : 5,
+            "pure_acc" : 100
+            })
+
+    return {"message": "User registered successfully", "user_id": str(user_id), "calculated_id" : str(calculated_id)}
 
 class LoginForm(BaseModel):
     username: str
@@ -442,5 +456,109 @@ async def delete_reward(reward_id: str):
     if result == 0:
         raise HTTPException(status_code=404, detail="Reward not found")
     return {"message": "Reward deleted successfully"}
+
+
+# 배틀 생성
+class Battle(BaseModel):
+    comu_id : str
+    battle_name : str
+    monster_list : Optional[list] = None
+
+class Monster(BaseModel):
+    comu_id : str
+    monster_name : str
+    max_hp : int
+    pure_atk : int
+    pure_def : int
+    pure_heal : int
+    pure_acc : int
+
+@app.get("/battle")
+async def get_battle(comu_id : str = None):
+    session = None
+
+    battle = await db_manager.find_documents(session, "battle", {"comu_id" : comu_id})
+    serialized_battle = [serialize_item(s) for s in battle]
+
+    return {"battle" : serialized_battle}
+
+@app.get("/monster")
+async def get_monster(comu_id : str = None):
+    session = None
+
+    monster = await db_manager.find_documents(session, "monster", {"comu_id" : comu_id})
+    serialized_monster = [serialize_item(m) for m in monster]
+
+    return {"monster" : serialized_monster}
+
+@app.post("/monster")
+async def create_reward(monster: Monster):
+    monster_data = monster.dict()
+
+    session = await db_manager.client.start_session()
+
+    try:
+        session.start_transaction()
+
+        monster_id = await db_manager.create_one_document(session, "monster", monster_data)
+        if not monster_id:
+            await session.abort_transaction()
+            raise HTTPException(status_code=500, detail=f"Transaction failed.")
+        else:
+            await session.commit_transaction()
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+    return {"message": "Monster created successfully", "monster_id": str(monster_id)}
+
+# 3. 특정 판매 아이템 수정
+@app.put("/monster/{monster_id}")
+async def update_monster(monster_id: str, monster: Monster):
+    session = await db_manager.client.start_session()
+    monster_data = monster.dict()
+    try:
+        session.start_transaction()
+
+        document = await db_manager.find_one_document(session, "monster", {"_id": ObjectId(monster_id)})
+        if document:
+            result = await db_manager.update_one_document(session, "monster", {"_id": ObjectId(monster_id)}, monster_data)
+
+            await session.commit_transaction()
+        
+        else:
+            raise HTTPException(status_code=404, detail="Monster not found")
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+    finally:
+        await session.end_session()  # 세션 종료
+    return {"message": "Monster updated successfully"}
+
+# 4. 판매 아이템 삭제
+@app.delete("/monster/{monster_id}")
+async def delete_reward(monster_id: str):
+    session = await db_manager.client.start_session()
+
+    try:
+        session.start_transaction()
+        
+        result = await db_manager.remove_one_document(session, "monster", {"_id": ObjectId(monster_id)})
+        if result == 0:
+            raise HTTPException(status_code=404, detail="Monster not found")
+
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+    finally:
+        await session.end_session()  # 세션 종료
+    return {"message": "Monster deleted successfully"}
 
 # 로그아웃은 클라이언트 측에서 처리됩니다.

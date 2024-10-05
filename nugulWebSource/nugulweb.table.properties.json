@@ -21,6 +21,39 @@
                     "width" : "large"
                 }
             }
+        },
+        "read_delete_monster" : {
+            "table" : {
+                "selected" : {
+                    "disabled" : false,
+                    "column_type" : "checkbox",
+                    "width" : "small"
+                },
+                "monster_name" : {
+                    "disabled" : true,
+                    "column_type" : "text"
+                },
+                "max_hp" : {
+                    "disabled" : true,
+                    "column_type" : "number"
+                },
+                "pure_atk" : {
+                    "disabled" : true,
+                    "column_type" : "number"
+                },
+                "pure_def" : {
+                    "disabled" : true,
+                    "column_type" : "number"
+                },
+                "pure_heal" : {
+                    "disabled" : true,
+                    "column_type" : "number"
+                },
+                "pure_acc" : {
+                    "disabled" : true,
+                    "column_type" : "number"
+                }
+            }
         }
     },
     "user" : {

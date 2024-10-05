@@ -89,6 +89,29 @@
                 "reward_money" : "보상 금액",
                 "reward_description" : "보상 설명"
             }
+        },
+        "read_delete_monster" : {
+            "title" : "몬스터 정보",
+            "table" : {
+                "selected" : "선택",
+                "monster_name" : "몬스터 이름",
+                "max_hp" : "최대 체력",
+                "pure_atk" : "공격력",
+                "pure_def" : "방어력",
+                "pure_heal" : "회복력",
+                "pure_acc" : "명중률"
+            }
+        },
+        "create_update_monster" : {
+            "title" : "몬스터 정보",
+            "form" : {
+                "monster_name" : "몬스터 이름",
+                "max_hp" : "최대 체력",
+                "pure_atk" : "공격력",
+                "pure_def" : "방어력",
+                "pure_heal" : "회복력",
+                "pure_acc" : "명중률"
+            }
         }
     },
     "user" : {
@@ -157,6 +180,17 @@
                 "required" : "필수 칼럼 값이 입력되지 않았습니다.",
                 "update" : "보상 수정에 실패했습니다. 관리자에게 문의 바랍니다.",
                 "create" : "보상 생성에 실패했습니다. 관리자에게 문의 바랍니다."
+            },
+            "create_update_monster" : {
+                "required" : "필수 칼럼 값이 입력되지 않았습니다.",
+                "no_selected" : "전달할 수 없는 데이터가 전달되었습니다. 관리자에게 문의 바랍니다.",
+                "update" : "몬스터 수정에 실패했습니다. 관리자에게 문의 바랍니다.",
+                "create" : "몬스터 생성에 실패했습니다. 관리자에게 문의 바랍니다."
+            },
+            "read_delete_monster" : {
+                "selected" : "수정의 경우 한개의 아이템만 선택해주세요. \n새 아이템을 추가할 경우 선택을 모두 해제해주세요.",
+                "delete_selected" : "삭제할 몬스터를 선택해주세요.",
+                "delete" : "몬스터 삭제에 실패했습니다. 관리자에게 문의 바랍니다."
             }
         },
         "user" : {
@@ -190,6 +224,13 @@
             },
             "read_delete_reward" : {
                 "delete" : "보상 삭제에 성공했습니다."
+            },
+            "create_update_monster" : {
+                "update" : "몬스터 수정에 성공했습니다.",
+                "create" : "몬스터 추가에 성공했습니다."
+            },
+            "read_delete_monster" : {
+                "delete" : "몬스터 삭제에 성공했습니다."
             }
         },
         "user" : {

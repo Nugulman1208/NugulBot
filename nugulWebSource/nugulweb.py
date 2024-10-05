@@ -48,10 +48,11 @@ def rendering_form(message : dict, form_properties : dict,   path : str, send_li
 
     with st.form(key="form"):
         for item_name in result:
-            label = get_properties(message, path+"."+item_name)
+
+            label = get_properties(message, path+"."+item_name) or item_name
             properties = result[item_name]
             value = value_dict.get(item_name) or None
-
+        
             if properties['input_type'] == 'text_input':
                 send_list[item_name] = st.text_input(label, value = value)
             if properties['input_type'] == 'checkbox':
@@ -70,7 +71,8 @@ def rendering_form(message : dict, form_properties : dict,   path : str, send_li
             
             if properties['input_type'] == "number_input":
                 min_value = properties.get("min_value", 0)
-                send_list[item_name] = st.number_input(label, min_value = min_value, value =value)
+                max_value = properties.get("max_value", None)
+                send_list[item_name] = st.number_input(label, min_value = min_value, value =value, max_value = max_value)
 
             if properties['input_type'] == "text_area":
                 send_list[item_name] = st.text_area(label, value = value)
@@ -831,10 +833,134 @@ def read_slip():
                 st.write(f"자산 변경 : {slip['before_money']} → {slip['after_money']} ({slip['money_change']})")
 
 
+def read_user():
+    st.session_state['current_page'] = 'read_user'
+    base_path = "admin.read_user."
+    comu_id = st.session_state.get('comu_id')
+    username  = st.session_state.get('username')
+
+    if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
+        show_message(st.session_state['prior_message'], st.session_state['prior_status'])
+        st.session_state['prior_message'] = None
+        st.session_state['prior_status'] = None
+
+    response = make_api_request("user_battle", data={"comu_id": comu_id, "username" : username}) 
 
 
+def read_delete_monster():
+    st.title(get_properties(message, 'admin.read_delete_monster.title'))
+
+    st.session_state['current_page'] = 'read_delete_monster'
+    base_path = "admin.read_delete_monster."
+    comu_id = st.session_state.get('comu_id')
+    username  = st.session_state.get('username')
+
+    if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
+        show_message(st.session_state['prior_message'], st.session_state['prior_status'])
+        st.session_state['prior_message'] = None
+        st.session_state['prior_status'] = None
+
+    response = make_api_request("monster", data={"comu_id": comu_id})
+
+    col1, col2 = st.columns([1,1])
+    with col1:
+        create_button = st.button("CREATE/UPDATE", key="create_update_button", use_container_width=True)
+    with col2:
+        delete_button = st.button("DELETE", key="delete_button",use_container_width=True)
+
+    if isinstance(response, dict) and "monster" in response.keys():
+        monster_df = pd.DataFrame(response['monster'])
+
+        monster_df.insert(0, 'selected', False)
+
+        edited_df = rendering_data_editor(message, table_properties, "admin.read_delete_monster.table", monster_df)
+
+        selected_monster = edited_df[edited_df['selected']]  # 선택된 행만 필터링
+        selected_monster = selected_monster.to_dict(orient='records')
+
+    if create_button:
+        if len(selected_monster) == 0:
+            st.session_state['current_page'] = 'create_update_monster'
+            st.session_state['selected_monster'] = None
+            st.rerun()
+        elif len(selected_monster) == 1:
+            st.session_state['current_page'] = 'create_update_monster'
+            st.session_state['selected_monster'] = selected_monster[0]
+            st.rerun()
+        else:
+            st.error(get_properties(message, "error.admin.read_delete_monster.selected"))
+
+    if delete_button:
+        delete_flag = True
+        if len(selected_monster) == 0:
+            show_message(get_properties(message, "error."+base_path+"delete_selected"), "error")
+        else:
+            for item in selected_monster:
+                _id = item.get('_id', None)
+                if _id:
+                    response = make_api_request(f"monster/{_id}", data=item, method='DELETE')
+                    if response == None:
+                        delete_flag = False
+                        break
+                else:
+                    delete_flag = False
+            
+            if delete_flag:
+                st.session_state['prior_message'] = get_properties(message, "success."+base_path+"delete")
+                st.session_state['prior_status'] = "success"
+                st.rerun()
+            else:
+                show_message(get_properties(message, "error."+base_path+"delete"), "error")
 
 
+def create_update_monster():
+    st.title(get_properties(message, 'admin.create_update_monster.title'))
+
+    item_selected = st.session_state.get("selected_monster") or {}
+
+
+    st.session_state['current_page'] = 'create_update_monster'
+    base_path = "admin.create_update_monster."
+    comu_id = st.session_state.get('comu_id')
+
+    if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
+        show_message(st.session_state['prior_message'], st.session_state['prior_status'])
+        st.session_state['prior_message'] = None
+        st.session_state['prior_status'] = None
+
+    send_dict = rendering_form(message, form_properties, base_path+"form", {}, item_selected)
+    send_dict['comu_id'] = comu_id
+
+    if item_selected.get("_id", None):
+        send_dict['_id'] = item_selected.get("_id", None)
+
+    if send_dict['submit_button']:
+        if not validate(form_properties, base_path+"form", send_dict):
+            st.error(get_properties(message, "error." + base_path + "required"))
+        else:
+            if send_dict.get('_id', None):
+                response = make_api_request(f"monster/{send_dict['_id']}", data=send_dict, method='PUT')
+                if response:
+                    st.session_state['current_page'] = 'read_delete_monster'
+                    st.session_state['selected_item'] = None
+                    st.session_state['prior_message'] = get_properties(message, "success." + base_path + "update")
+                    st.session_state['prior_status'] = "success"
+                    st.rerun()
+                else:
+                    show_message(get_properties(message, "error." + base_path + "update"), "error")
+            else:
+                response = make_api_request("monster", data=send_dict, method='POST')
+                if response:
+                    st.session_state['current_page'] = 'read_delete_monster'
+                    st.session_state['selected_item'] = None
+                    st.session_state['prior_message'] = get_properties(message, "success." + base_path + "create")
+                    st.session_state['prior_status'] = "success"
+                    st.rerun()
+                else:
+                    show_message(get_properties(message, "error." + base_path + "create"), "error")
+
+
+        
 
 
 
@@ -860,7 +986,11 @@ def main():
             register()
     elif st.session_state.get("is_admin", False) == True:
         options = st.sidebar.radio(get_properties(message, 'main.sidebar.radio.title'), 
-                                    [get_properties(message, 'admin.item_crud.title'), get_properties(message, 'admin.create_update_reward.title'), get_properties(message, 'common.menu.logout')])
+                                    [
+                                        get_properties(message, 'admin.item_crud.title'),
+                                        get_properties(message, 'admin.create_update_reward.title'),
+                                        get_properties(message, 'admin.read_delete_monster.title'),
+                                        get_properties(message, 'common.menu.logout')])
         
         if options == get_properties(message, 'admin.item_crud.title'):
             if st.session_state['current_page'] != 'create_update_item':
@@ -872,6 +1002,12 @@ def main():
                 read_delete_reward()  # 로그인 후 아이템 CRUD 페이지 표시
             else:
                 create_update_reward()
+
+        elif options == get_properties(message, 'admin.read_delete_monster.title'):
+            if st.session_state['current_page'] != 'create_update_monster':
+                read_delete_monster()
+            else:
+                create_update_monster()
     
         elif options == get_properties(message, 'common.menu.logout'):
             logout()
