@@ -1,0 +1,179 @@
+{
+    "Authorization": {
+        "sign_up": {
+            "form": {
+                "username": {
+                    "input_type": "text_input",
+                    "label": "유저 아이디",
+                    "help": "어드민 계정의 아이디를 입력하세요.",
+                    "required": true,
+                    "required_error_message": "유저 아이디는 필수 입력 항목입니다.",
+                    "placeholder": "Your username"
+                },
+                "password": {
+                    "input_type": "password",
+                    "label": "비밀번호",
+                    "help": "비밀번호를 입력하세요.",
+                    "required": true,
+                    "required_error_message": "비밀번호는 필수 입력 항목입니다.",
+                    "placeholder": "Your password"
+                },
+                "comu_id": {
+                    "input_type": "text_input",
+                    "label": "커뮤니티 이름",
+                    "help": "커뮤니티 이름을 입력하세요.",
+                    "required": true,
+                    "required_error_message": "커뮤니티 이름은 필수 입력 항목입니다.",
+                    "placeholder": "Your community name"
+                },
+                "server_id" : {
+                    "input_type": "text_input",
+                    "label": "디스코드 서버 아이디",
+                    "help": "서버 아이디를 입력하세요.",
+                    "required": true,
+                    "required_error_message": "서버 아이디는 필수 입력 항목입니다.",
+                    "placeholder": "Your discord server id"
+                }
+            }
+        },
+        "sign_in": {
+            "form": {
+                "username": {
+                    "input_type": "text_input",
+                    "label": "유저 아이디",
+                    "help": "어드민 계정의 아이디를 입력하세요.",
+                    "required": true,
+                    "required_error_message": "유저 아이디는 필수 입력 항목입니다.",
+                    "placeholder": "Your username"
+                },
+                "password": {
+                    "input_type": "password",
+                    "label": "비밀번호",
+                    "help": "비밀번호를 입력하세요.",
+                    "required": true,
+                    "required_error_message": "비밀번호는 필수 입력 항목입니다.",
+                    "placeholder": "Your password"
+                }
+            }
+        }
+    },
+    "UserMasterInformation" : {
+        "create_update_user_master" : {
+            "form" : {
+                "user_name": {
+                    "input_type": "text_input",
+                    "label": "유저 이름",
+                    "required": true,
+                    "required_error_message": "유저 이름은 필수 입력 항목입니다.",
+                    "placeholder": "Your username"
+                },
+                "battle_type": {
+                    "input_type": "selectbox",
+                    "label": "배틀 타입",
+                    "item_type_options": ["ATK", "HEAL", "DEF"],
+                    "required": true,
+                    "required_error_message": "배틀타입은 필수 입력 항목입니다."
+                },
+                "max_hp": {
+                    "input_type": "number_input",
+                    "label": "최대 체력",
+                    "min_value": 0,
+                    "required": true,
+                    "required_error_message": "최대 체력은 필수 입력 항목입니다."
+                },
+                "attack": {
+                    "input_type": "number_input",
+                    "label": "공격력",
+                    "min_value": 0,
+                    "required": true,
+                    "required_error_message": "공격력은 필수 입력 항목입니다."
+                },
+                "defense": {
+                    "input_type": "number_input",
+                    "label": "방어력",
+                    "min_value": 0,
+                    "required": true,
+                    "required_error_message": "방어력은 필수 입력 항목입니다."
+                },
+                "heal": {
+                    "input_type": "number_input",
+                    "label": "회복력",
+                    "min_value": 0,
+                    "required": true,
+                    "required_error_message": "회복력은 필수 입력 항목입니다."
+                },
+                "user_id": {
+                    "input_type": "text_input",
+                    "label": "디스코드 아이디",
+                    "placeholder": "User's discord id"
+                }
+            }
+        }
+    },
+    "RewardManagement" : {
+        "create_update_reward" : {
+            "form" : {
+                "reward_name" : {
+                    "required_error_message": "보상 이름은 필수 입력 항목입니다.",
+                    "label" : "보상 이름", 
+                    "required" : true,
+                    "input_type" : "text_input"
+                },
+                "reward_money" : {
+                    "required_error_message": "보상 금액은 필수 입력 항목입니다.",
+                    "label" : "보상 금액", 
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 0
+                },
+                "reward_description": {
+                    "required_error_message": "보상 설명은 필수 입력 항목입니다.",
+                    "label" : "보상 설명", 
+                    "required" : true,
+                    "input_type" :"text_area" 
+                }
+            }
+        }
+    },
+    "MasterItemManagement" : {
+        "create_update_item" : {
+            "form" : {
+                "item_name" : {
+                    "label" : "아이템 이름",
+                    "required_error_message": "아이템 이름은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "text_input"
+                },
+                "item_price" : {
+                    "label" : "아이템 가격",
+                    "required_error_message": "아이템 가격은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 0
+                },
+                "item_description": {
+                    "label" : "아이템 설명",
+                    "required_error_message": "아이템 설명은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" :"text_area" 
+                },
+                "item_type" : {
+                    "label" : "아이템 타입",
+                    "required_error_message": "아이템 타입은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "selectbox",
+                    "item_type_options" : [
+                        "ROLEPLAY", "HEAL", "BS_CLEAR", "BUFF", "RANDOM"
+                    ],
+                    "help": "아이템의 종류입니다. 배틀용 : HEAL 힐, BUFF 버프, BS_CLEAR 상태이상 회복 / 배틀 미사용 : RANDOM 랜덤 박스, ROLEPLAY  롤플레이용"
+                },
+                "item_formula" : {
+                    "label" : "아이템 공식",
+                    "required" : false,
+                    "input_type" : "text_input",
+                    "help": "배틀 사용시 아이템 공식입니다. HEAL 시 회복되는 수치 (숫자로 표기 ex. 30) / BUFF 해당 턴 강화 효괴 (예시 : 1.2 배일 경우 *1.2 로 기입, 30 데미지 업은 + 30 으로 기입)"
+                }
+            }
+        }
+    }
+}

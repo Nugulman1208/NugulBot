@@ -1,0 +1,110 @@
+{
+    "MasterItemManagement" : {
+        "read_delete_item" : {
+            "table" : {
+                "selected" : {
+                    "disabled" : false,
+                    "column_type" : "checkbox",
+                    "label" : "선택",
+                    "width" : "small"
+                },
+                "item_type" : {
+                    "disabled" : true,
+                    "label" : "타입",
+                    "column_type" : "text"
+                },
+                "item_price" : {
+                    "disabled" : true,
+                    "label" : "가격",
+                    "column_type" : "text"
+                },
+                "item_name" : {
+                    "disabled" : true,
+                    "label" : "아이템 이름",
+                    "column_type" : "text"
+                },
+                "item_description": {
+                    "disabled" : true,
+                    "column_type" :"text",
+                    "label" : "아이템 설명",
+                    "width" : "large"
+                }
+            }
+        }
+    },
+    "RewardManagement" : {
+        "read_delete_reward" : {
+            "table" : {
+                "selected" : {
+                    "disabled" : false,
+                    "column_type" : "checkbox",
+                    "label" : "선택",
+                    "width" : "small"
+                },
+                "reward_name" : {
+                    "disabled" : true,
+                    "label" : "보상이름",
+                    "column_type" : "text"
+                },
+                "reward_money" : {
+                    "disabled" : true,
+                    "label" : "금액",
+                    "column_type" : "number"
+                },
+                "reward_description": {
+                    "disabled" : true,
+                    "column_type" :"text",
+                    "label" : "보상 설명",
+                    "width" : "large"
+                }
+            }
+        }
+    },
+    "UserMasterInformation": {
+        "read_delete_user_master" : {
+            "table": {
+                "selected" : {
+                    "column_type": "checkbox",
+                    "label": "선택",
+                    "width": "small",
+                    "disabled" : false
+                },
+                "user_name": {
+                    "column_type": "text",
+                    "label": "이름",
+                    "width": "small"
+                },
+                "battle_type": {
+                    "column_type": "text",
+                    "label": "배틀타입",
+                    "width": "small"
+                },
+                "max_hp": {
+                    "column_type": "text",
+                    "label": "최대 체력",
+                    "width": "small"
+                },
+                "attack": {
+                    "column_type": "text",
+                    "label": "공격력",
+                    "width": "small"
+                },
+                "defense": {
+                    "column_type": "text",
+                    "label": "방어력",
+                    "width": "small"
+                },
+                "heal": {
+                    "column_type": "text",
+                    "label": "회복력",
+                    "width": "small"
+                },
+                "user_id": {
+                    "column_type": "text",
+                    "label": "디스코드 아이디",
+                    "width": "small"
+                }
+            }
+        }
+    }
+}
