@@ -128,6 +128,7 @@ class UserMaster(BaseModel):
 async def create_user(form_data: UserMaster):
     session = await db_manager.client.start_session()
     send_data = form_data.dict()
+    send_data['battle_type'] = send_data['battle_type'].lower()
 
     try:
         session.start_transaction()
@@ -152,6 +153,7 @@ async def create_user(form_data: UserMaster):
 async def update_user(row_id: str, form_data: UserMaster):
     session = await db_manager.client.start_session()
     send_data = form_data.dict()
+    send_data['battle_type'] = send_data['battle_type'].lower()
 
     try:
         session.start_transaction()
@@ -211,6 +213,7 @@ async def delete_user_master(row_id: str):
             result = await db_manager.update_documents(session, "user_calculate", extra_query, {"del_flag" : True})
             result = await db_manager.update_documents(session, "user_active_skill", extra_query, {"del_flag" : True})
             result = await db_manager.update_documents(session, "user_passive_skill", extra_query, {"del_flag" : True})
+            result = await db_manager.update_documents(session, "inventory", extra_query, {"del_flag" : True})
         else:
             raise HTTPException(status_code=404, detail="User Master not found")
 
@@ -354,6 +357,8 @@ async def read_item(comu_id : str):
 async def create_item(form_data: Item):
     session = await db_manager.client.start_session()
     send_data = form_data.dict()
+    send_data['item_type'] = send_data['item_type'].lower()
+
     collection_name = "item"
 
     try:
@@ -379,6 +384,7 @@ async def create_item(form_data: Item):
 async def update_item(row_id: str, form_data: Item):
     session = await db_manager.client.start_session()
     send_data = form_data.dict()
+    send_data['item_type'] = send_data['item_type'].lower()
     collection_name = "item"
 
     try:

@@ -12,5 +12,14 @@
   "StoreBot.accrue.error.args.reward_name" : "보상 이름을 입력해주세요.",
   "StoreBot.accrue.error.args.reward_count" : "보상의 횟수는 1 이상이어야 합니다.",
   "StoreBot.accrue.error.reward.cannot_find" : "정확하지 않은 보상이름입니다.",
-  "StoreBot.accrue.error.slip.cannot_create" : "전표 테이블에 데이터를 넣을 수 없습니다. 관리자에게 문의 바랍니다."
+  "StoreBot.accrue.error.slip.cannot_create" : "전표 테이블에 데이터를 넣을 수 없습니다. 관리자에게 문의 바랍니다.",
+  "StoreBot.purchase.error.item.cannot_find" : "정확하지 않은 아이템 이름입니다.",
+  "StoreBot.purchase.error.args.item_count" : "구매할 아이템 개수는 1 이상이어야 합니다.",
+  "StoreBot.purchase.no_mony" : "재화가 부족합니다. 다시 확인 바랍니다.",
+  "StoreBot.purchase.error.inventory.cannot_update" : "인벤토리 테이블을 수정할 수 없습니다. 관리자에게 문의 바랍니다.",
+  "StoreBot.purchase.error.slip.cannot_update"  : "전표 테이블에 데이터를 넣을 수 없습니다. 관리자에게 문의 바랍니다.",
+  "StoreBot.purchase.success.gatcha" : "구매를 완료했습니다. 가챠 결과 - ",
+  "UserInfoBot.inventory.inventory_header" : "재화 - {money}\n",
+  "UserInfoBot.inventory.inventory_item": "{item_name} - {count}개\n",
+  "UserInfoBot.inventory.inventory_footer": "이상이 {user_name} 의 인벤토리입니다."
 }

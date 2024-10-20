@@ -155,3 +155,114 @@ class UserInfoBot(commands.Cog):
         except Exception as e:
             print(e)
             await interaction.followup.send(self.messages['my_info.info_error'].format(error=e))
+
+    
+    @app_commands.command(name="인벤토리")
+    async def inventory(self, interaction: discord.Interaction):
+        await interaction.response.defer()  # 즉시 응답을 지연시킴
+        try:
+            server_id = str(interaction.guild.id)  # 서버 ID를 가져옴
+            user_id = str(interaction.user)
+
+            async with await self.db_manager.client.start_session() as session:
+                async with session.start_transaction():
+
+                    calculate_collection_name = "user_calculate"
+                    calculate_query = {"user_id": user_id, "server_id": server_id, "del_flag" : False}
+                    calculate_data = await self.db_manager.find_one_document(session, calculate_collection_name, calculate_query)
+                    if calculate_data is None:
+                        await interaction.followup.send(self.messages['common.not_registered_user'])
+                        return
+
+                    send_str = self.messages['UserInfoBot.inventory.inventory_header'].format(money=calculate_data['money'])
+
+                    inventory_collection_name = "inventory"
+                    pipeline = [
+                        {
+                            '$match': {
+                                'server_id' : server_id,
+                                'user_id': user_id,
+                                'can_use': True,
+                                "del_flag" : False
+                            }
+                        },
+                        {
+                            '$group': {
+                                '_id': {
+                                    'user_id': '$user_id',
+                                    'item_name': '$item_name'
+                                },
+                                'count': {'$sum': 1}
+                            }
+                        },
+                        {
+                            '$project': {
+                                '_id': 0,
+                                'user_name': '$_id.user_id',
+                                'item_name': '$_id.item_name',
+                                'count': 1
+                            }
+                        }
+                    ]
+
+                    collection = self.db_manager.database[inventory_collection_name]
+                    result = collection.aggregate(pipeline, session=session)
+
+                    summary = []
+                    async for doc in result:
+                        summary.append(doc)
+
+                    for s in summary:
+                        send_str += self.messages['UserInfoBot.inventory.inventory_item'].format(item_name=s['item_name'], count=s['count'])
+
+                    send_str += self.messages['UserInfoBot.inventory.inventory_footer'].format(user_name=calculate_data['user_name'])
+                    await interaction.followup.send(send_str)
+        except Exception as e:
+            print(e)
+            await interaction.followup.send(self.messages['common.catch.error'].format(error = e))
+
+    @app_commands.command(name="적립내역")
+    async def get_slip_data(self, interaction: discord.Interaction):
+        await interaction.response.defer()  # 응답 지연을 알림
+
+        try:
+            server_id = str(interaction.guild.id)  # 서버 ID를 가져옴
+            user_id = str(interaction.user)  # 명령어를 친 사용자의 ID를 가져옴
+            info_type = "적립"
+
+            async with await self.db_manager.client.start_session() as session:
+                async with session.start_transaction():
+
+                    calculate_collection_name = "user_calculate"
+                    calculate_query = {"user_id": user_id, "server_id": server_id, "del_flag" : False}
+
+                    calculate_data = await self.db_manager.find_one_document(session, calculate_collection_name, calculate_query)
+                    if calculate_data is None:
+                        await interaction.followup.send(self.messages['common.not_registered_user'])
+                        return
+
+                    # 기본 쿼리 조건: 서버 ID와 사용자 ID
+                    query = {"server_id": server_id, "user_id": user_id, "description" : {'$regex': info_type, "$options": "i"}}
+
+                    # 슬립 데이터 조회, 과거순으로 정렬
+                    slips = await self.db_manager.find_documents(
+                        session,
+                        "slip",
+                        query
+                    )
+
+                    if not slips:
+                        await interaction.followup.send(self.messages['get_slip_data.no_data_found'])
+                        return
+
+                    # 슬립 데이터를 문자열로 변환하여 메시지로 전송
+                    slip_str = ""
+                    for slip in slips:
+                        slip_str += f"{slip['description']}\n"
+                        slip_str += "-" * 20 + "\n"
+
+                    await interaction.followup.send(slip_str)
+
+        except Exception as e:
+            print(e)
+            await interaction.followup.send(self.messages['get_slip_data.error'])
