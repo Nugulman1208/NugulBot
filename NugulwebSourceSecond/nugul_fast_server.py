@@ -120,7 +120,6 @@ class UserMaster(BaseModel):
     attack : int
     defense : int
     heal : int
-    user_id :  Optional[str] = None
     comu_id : str
     server_id : str
 
@@ -160,6 +159,20 @@ async def update_user(row_id: str, form_data: UserMaster):
         document = await db_manager.find_one_document(session, "user_master", {"_id": ObjectId(row_id)})
         if document:
             result = await db_manager.update_one_document(session, "user_master", {"_id": ObjectId(row_id)}, send_data)
+            
+            extra_query = {
+                "server_id" : document.get("server_id"),
+                "user_id" : document.get("user_id"),
+                "user_name" : document.get("user_name")
+            }
+
+            calculate_document = await db_manager.find_one_document(session, "user_calculate", extra_query)
+
+            if calculate_document:
+                if calculate_document.get("hp") > send_data.get("max_hp"):
+                    send_data['hp'] = send_data.get("max_hp")
+
+                result = await db_manager.update_one_document(session, "user_calculate", extra_query, send_data)
         else:
             raise HTTPException(status_code=404, detail="User Master not found")
 
@@ -187,7 +200,17 @@ async def delete_user_master(row_id: str):
         document = await db_manager.find_one_document(session, "user_master", {"_id": ObjectId(row_id)})
         if document:
             document['del_flag'] = True
-            result = await db_manager.update_one_document(session, "user_master", {"_id": ObjectId(row_id)}, document)
+            result = await db_manager.update_documents(session, "user_master", {"_id": ObjectId(row_id)}, document)
+            
+            extra_query = {
+                "server_id" : document.get("server_id"),
+                "user_id" : document.get("user_id"),
+                "user_name" : document.get("user_name")
+            }
+
+            result = await db_manager.update_documents(session, "user_calculate", extra_query, {"del_flag" : True})
+            result = await db_manager.update_documents(session, "user_active_skill", extra_query, {"del_flag" : True})
+            result = await db_manager.update_documents(session, "user_passive_skill", extra_query, {"del_flag" : True})
         else:
             raise HTTPException(status_code=404, detail="User Master not found")
 

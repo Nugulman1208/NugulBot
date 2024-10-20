@@ -101,11 +101,6 @@
                     "min_value": 0,
                     "required": true,
                     "required_error_message": "회복력은 필수 입력 항목입니다."
-                },
-                "user_id": {
-                    "input_type": "text_input",
-                    "label": "디스코드 아이디",
-                    "placeholder": "User's discord id"
                 }
             }
         }
