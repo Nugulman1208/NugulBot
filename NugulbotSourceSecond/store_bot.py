@@ -277,3 +277,144 @@ class StoreBot(commands.Cog):
             app_commands.Choice(name=match, value=match)
             for match in matches[:25]
         ]
+
+    @app_commands.command(name="아이템양도")
+    @app_commands.describe(item_name="양도할 아이템의 이름", target="아이템을 받을 대상")
+    async def transfer_item(self, interaction: discord.Interaction, item_name: str, target: str):
+        await interaction.response.defer()  # 응답 지연을 알림
+
+        try:
+            server_id = str(interaction.guild.id)
+            from_user_id = str(interaction.user)  # 양도인 ID
+
+            async with await self.db_manager.client.start_session() as session:
+                async with session.start_transaction():
+
+                    from_user = await self.db_manager.find_one_document(
+                        session,
+                        "user_calculate",
+                        {"server_id": server_id, "user_id": from_user_id, "del_flag" : False}
+                    )
+
+                    if from_user is None:
+                        await interaction.followup.send(self.messages['common.not_registered_user'])
+                        await session.abort_transaction()
+                        return
+
+                    # 인벤토리에서 아이템 확인
+                    inventory_item = await self.db_manager.find_one_document(
+                        session,
+                        "inventory",
+                        {"server_id": server_id, "user_id": from_user_id, "item_name": item_name, "can_use": True, "del_flag" : False}
+                    )
+
+                    if inventory_item is None:
+                        await interaction.followup.send(self.messages['StoreBot.transfer_item.error.item_not_found'])
+                        await session.abort_transaction()
+                        return
+
+                    # 대상 사용자 확인
+                    to_user = await self.db_manager.find_one_document(
+                        session,
+                        "user_calculate",
+                        {"server_id": server_id, "user_name": target, "del_flag" : False}
+                    )
+
+                    if to_user is None:
+                        await interaction.followup.send(self.messages['StoreBot.transfer_item.error.target_not_found'])
+                        await session.abort_transaction()
+                        return
+
+                    to_user_id = to_user['user_id']  # 수령인 ID
+
+                    # 아이템 양도: 인벤토리에서 현재 사용자 아이템 제거하고 대상 사용자에게 추가
+                    inventory_update = await self.db_manager.update_one_document(
+                        session,
+                        "inventory",
+                        {"_id": inventory_item["_id"]},
+                        {"del_flag" : True}
+                    )
+
+                    if inventory_update[0] == 0:
+                        await interaction.followup.send(self.messages['StoreBot.purchase.error.inventory.cannot_update'])
+                        await session.abort_transaction()
+                        return
+
+                    new_inventory_data = inventory_item
+                    new_inventory_data.pop("_id")
+                    new_inventory_data['user_id'] = to_user['user_id']
+                    new_inventory_data['can_use'] = True
+                    new_inventory_data['user_name'] =  to_user['user_name']
+                    new_inventory_data['del_flag'] = False
+
+                    inventory_create = await self.db_manager.create_one_document(session, "inventory", new_inventory_data)
+                    if inventory_create is None:
+                        await interaction.followup.send(self.messages['StoreBot.purchase.error.inventory.cannot_update'])
+                        await session.abort_transaction()
+                        return
+
+                    # slip에 기록 남기기
+                    slip_data = {
+                        "server_id": server_id,
+                        "from_user_id": from_user['user_id'],  # 양도인 ID
+                        "from_user_name": from_user['user_name'],  # 양도인 이름
+                        "to_user_id": to_user_id,  # 수령인 ID
+                        "to_user_name": target,  # 수령인 이름
+                        "item_name": item_name,  # 양도된 아이템 이름
+                        "description": f"[아이템 양도] {item_name} ({from_user['user_name']} -> {target})"
+                    }
+
+                    slip_result = await self.db_manager.create_one_document(session, "slip", slip_data)
+                    if slip_result is None:
+                        await interaction.followup.send(self.messages['StoreBot.purchase.error.slip.cannot_update'])
+                        await session.abort_transaction()
+                        return
+
+                    # 성공 메시지 전송
+                    await session.commit_transaction()
+                    await interaction.followup.send(self.messages['StoreBot.transfer_item.success'].format(item_name=item_name, target=target))
+
+        except Exception as e:
+            print(e)
+            await session.abort_transaction()
+            await interaction.followup.send(self.messages['transfer_item.error'])
+
+    @transfer_item.autocomplete('item_name')
+    async def autocomplete_item_name(self, interaction: discord.Interaction, current: str):
+        server_id = str(interaction.guild.id)  # 서버 ID를 가져옴
+        user_id = str(interaction.user)
+
+        async with await self.db_manager.client.start_session() as session:
+            async with session.start_transaction():
+                items = await self.db_manager.find_documents(
+                    session,
+                    "inventory",
+                    {"server_id": server_id, "user_id": user_id, "item_name": {'$regex': f'^{current}', "$options": "i"}, "can_use": True, "del_flag" : False}
+                )
+
+                item_names = [item['item_name'] for item in items]
+                item_names = list(set(item_names))
+
+                return [
+                    app_commands.Choice(name=item_name, value=item_name)
+                    for item_name in item_names[:25]  # 최대 25개까지 자동완성 제안
+                ]
+
+    @transfer_item.autocomplete('target')
+    async def autocomplete_target(self, interaction: discord.Interaction, current: str):
+        server_id = str(interaction.guild.id)  # 서버 ID를 가져옴
+        user_id = str(interaction.user)
+
+        async with await self.db_manager.client.start_session() as session:
+            async with session.start_transaction():
+                users = await self.db_manager.find_documents(
+                    session,
+                    "user_calculate",
+                    {"server_id": server_id, "user_name": {'$regex': f'^{current}', "$options": "i"}, "del_flag" : False}
+                )
+                user_names = [user['user_name'] for user in users if user['user_id'] != user_id]
+
+                return [
+                    app_commands.Choice(name=user_name, value=user_name)
+                    for user_name in user_names[:25]  # 최대 25개까지 자동완성 제안
+                ]

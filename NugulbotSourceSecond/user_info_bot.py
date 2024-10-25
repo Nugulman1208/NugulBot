@@ -174,7 +174,7 @@ class UserInfoBot(commands.Cog):
                         await interaction.followup.send(self.messages['common.not_registered_user'])
                         return
 
-                    send_str = self.messages['UserInfoBot.inventory.inventory_header'].format(money=calculate_data['money'])
+                    send_str = self.messages['UserInfoBot.inventory.inventory_header'].format(money=calculate_data.get("money",0))
 
                     inventory_collection_name = "inventory"
                     pipeline = [
@@ -221,14 +221,14 @@ class UserInfoBot(commands.Cog):
             print(e)
             await interaction.followup.send(self.messages['common.catch.error'].format(error = e))
 
-    @app_commands.command(name="적립내역")
-    async def get_slip_data(self, interaction: discord.Interaction):
+    @app_commands.command(name="장표내역")
+    async def get_slip_data(self, interaction: discord.Interaction, info_type : str ="적립"):
         await interaction.response.defer()  # 응답 지연을 알림
 
         try:
             server_id = str(interaction.guild.id)  # 서버 ID를 가져옴
             user_id = str(interaction.user)  # 명령어를 친 사용자의 ID를 가져옴
-            info_type = "적립"
+
 
             async with await self.db_manager.client.start_session() as session:
                 async with session.start_transaction():
@@ -242,7 +242,26 @@ class UserInfoBot(commands.Cog):
                         return
 
                     # 기본 쿼리 조건: 서버 ID와 사용자 ID
-                    query = {"server_id": server_id, "user_id": user_id, "description" : {'$regex': info_type, "$options": "i"}}
+                    if info_type != "양도" and info_type != "전체":
+                        query = {"server_id": server_id, "user_id": user_id, "description" : {'$regex': info_type, "$options": "i"}}
+                    elif info_type == "양도":
+                        query = {
+                            "server_id": server_id,
+                            "$or": [
+                                {"from_user_id": user_id},
+                                {"to_user_id": user_id}
+                            ],
+                            "description": {'$regex': info_type, "$options": "i"}
+                        }
+                    elif info_type == "전체":
+                        query = {
+                            "server_id": server_id,
+                            "$or": [
+                                {"user_id": user_id},
+                                {"from_user_id": user_id},
+                                {"to_user_id": user_id}
+                            ]
+                        }
 
                     # 슬립 데이터 조회, 과거순으로 정렬
                     slips = await self.db_manager.find_documents(
@@ -252,7 +271,7 @@ class UserInfoBot(commands.Cog):
                     )
 
                     if not slips:
-                        await interaction.followup.send(self.messages['get_slip_data.no_data_found'])
+                        await interaction.followup.send(self.messages['UserInfoBot.get_slip_data.no_data_found'].format(info_type = info_type))
                         return
 
                     # 슬립 데이터를 문자열로 변환하여 메시지로 전송
@@ -265,4 +284,16 @@ class UserInfoBot(commands.Cog):
 
         except Exception as e:
             print(e)
-            await interaction.followup.send(self.messages['get_slip_data.error'])
+            await interaction.followup.send(self.messages['common.catch.error'].format(error = e))
+
+    @get_slip_data.autocomplete('info_type')
+    async def autocomplete_item_name(self, interaction: discord.Interaction, current: str):
+        
+        matches = ["적립", "양도", "구매", "사용", "전체"]
+        if not matches:
+            return [app_commands.Choice(name="No matches found", value="no_matches")]
+
+        return [
+            app_commands.Choice(name=match, value=match)
+            for match in matches[:25]
+        ]
