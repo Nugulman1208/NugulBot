@@ -8,6 +8,7 @@ from master_item_management import MasterItemManagement
 from master_user_active_skill_management import MasterUserActiveSkillManagement
 from master_monster_management import MasterMonsterManagement
 from master_monster_active_skill_management import MasterMonsterActiveSkillManagement
+from master_battle_management import MasterBattleManagement
 
 # 메인 화면
 def main():
@@ -34,8 +35,9 @@ def main():
         user_active_skill_option = "유저 액티브 스킬"
         monster_option = "몬스터 정보"
         monster_active_skill_option = "몬스터 액티브 스킬"
+        battle_option = "전투보기"
 
-        options = ["사용자", "보상", "아이템", "패시브", user_active_skill_option, monster_option, monster_active_skill_option, "전투보기"]
+        options = ["사용자", "보상", "아이템", "패시브", user_active_skill_option, monster_option, monster_active_skill_option, battle_option]
 
         select = st.sidebar.radio("메뉴", options)
 
@@ -86,6 +88,10 @@ def main():
                 page.rendering_page("read_delete_monster_active_skill")
             else:
                 page.rendering_page(st.session_state['current_page'])
+
+        if select == battle_option:
+            page = MasterBattleManagement("nugulweb.form.properties.json", "nugulweb.table.properties.json", "nugulweb.message.properties.json")
+            page.rendering_page()
 
 
 

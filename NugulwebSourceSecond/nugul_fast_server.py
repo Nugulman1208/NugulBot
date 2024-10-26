@@ -59,6 +59,7 @@ class RegisterUser(BaseModel):
     password: str
     comu_id: str
     server_id : str
+    battle_room_channel_id : str
 
 @app.get("/user/master")
 async def get_user_master(comu_id : str):
@@ -80,7 +81,8 @@ async def sign_up(user: RegisterUser):
         "username": user.username,
         "password": hashed_password,
         "comu_id": user.comu_id,
-        "server_id" : user.server_id
+        "server_id" : user.server_id,
+        "battle_room_channel_id" : user.battle_room_channel_id
     }
 
     # 중복 유저 검사
@@ -674,7 +676,6 @@ async def read_monster(comu_id : str):
     serialized_dict = [serialized_data(data) for data in data_list]
     return {f"{collection_name}_list": serialized_dict}
 
-# 보상 마스터 데이터 생성
 @app.post("/monster")
 async def create_monster(form_data: Monster):
     session = await db_manager.client.start_session()
@@ -757,3 +758,81 @@ async def delete_monster(row_id: str):
         await session.end_session()  # 세션 종료
 
     return {"message": "Monster delete successfully", "status" : "success", "message" : "몬스터 데이터 삭제에 성공했습니다."}
+
+# 몬스터 데이터 모델
+class Battle(BaseModel):
+    battle_name: str
+    server_id : str
+    monster_list : list
+    comu_id : str
+
+@app.get("/battle")
+async def read_battle(comu_id : str):
+    session = None
+    collection_name = "battle"
+    data_list = await db_manager.find_documents(session, collection_name, {"comu_id": comu_id, "del_flag" : False})
+
+    serialized_dict = [serialized_data(data) for data in data_list]
+    return {f"{collection_name}_list": serialized_dict}
+
+@app.post("/battle")
+async def create_battle(form_data: Battle):
+    session = await db_manager.client.start_session()
+    send_data = form_data.dict()
+    comu_id = send_data['comu_id']
+
+    collection_name = "battle"
+
+    try:
+        session.start_transaction()
+        send_data['del_flag'] = False
+
+        user_document = await db_manager.find_one_document(session, "users", {"comu_id": comu_id})
+        if not user_document:
+            raise HTTPException(status_code=404, detail="Comunity Master not found")
+
+        battle_room_channel_id = user_document.get("battle_room_channel_id")
+        send_data['channel_id'] = battle_room_channel_id
+
+        created_id = await db_manager.create_one_document(session, collection_name, send_data)
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "Battle created successfully", "channel_id" : battle_room_channel_id, f"{collection_name}_id": str(created_id), "status" : "success", "message" : "배틀 생성에 성공했습니다."}
+
+@app.delete("/battle/{row_id}")
+async def delete_battle(row_id: str):
+    session = await db_manager.client.start_session()
+    collection_name = "battle"
+
+    try:
+        session.start_transaction()
+
+        document = await db_manager.find_one_document(session, collection_name, {"_id": ObjectId(row_id)})
+        if document:
+            document['del_flag'] = True
+            result = await db_manager.update_one_document(session, collection_name, {"_id": ObjectId(row_id)}, document)
+        else:
+            raise HTTPException(status_code=404, detail="Monster Master not found")
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "Battle delete successfully", "status" : "success", "message" : "배틀 삭제에 성공했습니다."}

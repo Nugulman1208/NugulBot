@@ -165,6 +165,35 @@ class FormRenderer:
             return st.number_input(label, min_value=min_value, value=value, max_value=max_value, help=help_text)
         elif input_type == 'text_area':
             return st.text_area(label, value=str(value), help=help_text)
+        elif input_type == 'multiselect':
+            options = options or properties.get('item_type_options', [])
+
+            if isinstance(options, dict):
+                api_path = options['api_path']
+                data = options['data']
+                value_column = options['value_column']
+                collection_name = options['collection_name']
+
+                new_options = list()
+
+                for k, v in data.items():
+                    if isinstance(v, str) and "session." in v:
+                        key_of_state = v.replace("session.", "")
+                        data[k] = st.session_state[key_of_state]
+
+                api = APIClient(self.api_url)
+                data_list = api.make_request(api_path, data=data)
+                data_list = data_list.get(collection_name + "_list")
+
+                for d in data_list:
+                    new_options.append(d.get(value_column))
+                    
+                options = new_options
+                
+            # 값이 유효한지 검사하고 기본값 설정
+            if not value or value not in options:
+                value = []
+            return st.multiselect(label, options, default=value, help=help_text)
 
         return None
 

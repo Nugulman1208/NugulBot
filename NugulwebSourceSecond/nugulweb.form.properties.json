@@ -33,6 +33,14 @@
                     "required": true,
                     "required_error_message": "서버 아이디는 필수 입력 항목입니다.",
                     "placeholder": "Your discord server id"
+                },
+                "battle_room_channel_id" : {
+                    "input_type": "text_input",
+                    "label": "디스코드 전투 채널 아이디",
+                    "help": "디스코드 전투 채널 아이디를 입력하세요.",
+                    "required": true,
+                    "required_error_message": "디스코드 전투 채널 아이디는 필수 입력 항목입니다.",
+                    "placeholder": "Your discord battle room channel id"
                 }
             }
         },
@@ -340,6 +348,33 @@
                     "required_error_message": "스킬 설명은 필수 입력 항목입니다.",
                     "required" : true,
                     "input_type" :"text_area" 
+                }
+            }
+        }
+    },
+    "MasterBattleManagement" : {
+        "create_battle" : {
+            "form" : {
+                "battle_name": {
+                    "label" : "배틀 이름",
+                    "required_error_message": "배틀 이름은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "text_input"
+                },
+                "monster_list" : {
+                    "label" : "배틀 참여 몬스터",
+                    "required_error_message": "배틀 참여 몬스터는 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "multiselect",
+                    "item_type_options" : {
+                        "api_path" : "monster",
+                        "data" : {
+                            "comu_id" : "session.comu_id"
+                        },
+                        "value_column" : "monster_name",
+                        "collection_name" : "monster"
+                    },
+                    "help": "해당 스킬을 사용하는 몬스터 입니다."
                 }
             }
         }

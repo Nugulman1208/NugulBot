@@ -8,6 +8,7 @@ import os
 
 from user_info_bot import UserInfoBot
 from store_bot import StoreBot
+from battle_bot import BattleBot
 
 load_dotenv()
 
@@ -25,6 +26,7 @@ async def main():
     # ItemBuyBot 코그를 추가합니다.
     await bot.add_cog(UserInfoBot(bot, MONGO_URI, DB_NAME))
     await bot.add_cog(StoreBot(bot, MONGO_URI, DB_NAME))
+    await bot.add_cog(BattleBot(bot, MONGO_URI, DB_NAME))
     
     # 봇을 실행합니다.
     await bot.start(BOT_TOKEN)
