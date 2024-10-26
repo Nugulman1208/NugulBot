@@ -3,21 +3,21 @@ import pandas as pd
 import streamlit as st
 from api_client import APIClient
 
-class MasterItemManagement:
+class MasterMonsterManagement:
     def __init__(self, form_properties: str, data_editor_properties: str, message_properties : str):
         self.form_loader = PropertyLoader(form_properties)
         self.data_editor_loader = PropertyLoader(data_editor_properties)
         self.message_loader = PropertyLoader(message_properties)
         self.api_url = st.secrets["API_URL"]
 
-    def read_delete_item(self):
-        st.session_state['current_page'] = "read_delete_item"
+    def read_delete_monster(self):
+        st.session_state['current_page'] = "read_delete_monster"
         comu_id = st.session_state['comu_id']
         server_id = st.session_state['server_id']
         
-        basic_path = "MasterItemManagement.read_delete_item."
+        basic_path = "MasterMonsterManagement.read_delete_monster."
         common_basic_path = "common."
-        api_path = "item"
+        api_path = "monster"
 
         st.title(self.message_loader.get_property(basic_path + "title"))
 
@@ -50,11 +50,11 @@ class MasterItemManagement:
 
         if submit_button:
             if len(selected_row) == 0:
-                st.session_state['current_page'] = 'create_update_item'
+                st.session_state['current_page'] = 'create_update_monster'
                 st.session_state['selected_row'] = None
                 st.rerun()
             elif len(selected_row) == 1:
-                st.session_state['current_page'] = 'create_update_item'
+                st.session_state['current_page'] = 'create_update_monster'
                 st.session_state['selected_row'] = selected_row[0]
                 st.rerun()
             else:
@@ -76,22 +76,20 @@ class MasterItemManagement:
                         delete_flag = False
                 
                 if delete_flag:
-                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("아이템 삭제를")
+                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("몬스터 삭제를")
                     st.session_state['prior_status'] = "success"
                     st.rerun()
                 else:
-                    self.message_loader.get_property("common.message.error").format("아이템 삭제를")
+                    self.message_loader.get_property("common.message.error").format("몬스터 삭제를")
 
-
-
-    def create_update_item(self):
-        st.session_state['current_page'] = "create_update_item"
+    def create_update_monster(self):
+        st.session_state['current_page'] = "create_update_monster"
         comu_id = st.session_state['comu_id']
         server_id = st.session_state['server_id']
         
-        basic_path = "MasterItemManagement.create_update_item."
+        basic_path = "MasterMonsterManagement.create_update_monster."
         common_basic_path = "common."
-        api_path = "item"
+        api_path = "monster"
 
         st.title(self.message_loader.get_property(basic_path + "title"))
 
@@ -105,7 +103,7 @@ class MasterItemManagement:
             back_button = st.button(self.message_loader.get_property(common_basic_path+"button.back"), key="back_button")
 
         if back_button:
-            st.session_state['current_page'] = 'read_delete_item'
+            st.session_state['current_page'] = 'read_delete_monster'
             st.session_state['selected_row'] = None
             st.rerun()
 
@@ -126,23 +124,23 @@ class MasterItemManagement:
             if send_dict.get('_id', None):
                 response = api.make_request(f"{api_path}/{send_dict['_id']}", data=send_dict, method='PUT')
                 if response:
-                    st.session_state['current_page'] = 'read_delete_user_master'
+                    st.session_state['current_page'] = 'read_delete_monster'
                     st.session_state['selected_row'] = None
-                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("아이템 업데이트를")
+                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("몬스터 업데이트를")
                     st.session_state['prior_status'] = "success"
                     st.rerun()
                 else:
-                    UtilRenderer.show_message(self.message_loader.get_property("common.message.error").format("아이템 업데이트를"), "error")
+                    UtilRenderer.show_message(self.message_loader.get_property("common.message.error").format("몬스터 업데이트를"), "error")
             else:
                 response = api.make_request(api_path, data=send_dict, method='POST')
                 if response:
-                    st.session_state['current_page'] = 'read_delete_user_master'
+                    st.session_state['current_page'] = 'read_delete_monster'
                     st.session_state['selected_row'] = None
-                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("아이템 추가를")
+                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("몬스터 추가를")
                     st.session_state['prior_status'] = "success"
                     st.rerun()
                 else:
-                    UtilRenderer.show_message(self.message_loader.get_property("common.message.error").format("아이템 추가를"), "error")
+                    UtilRenderer.show_message(self.message_loader.get_property("common.message.error").format("몬스터 추가를"), "error")
 
 
 

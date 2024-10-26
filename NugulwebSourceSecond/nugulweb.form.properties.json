@@ -70,7 +70,7 @@
                 "battle_type": {
                     "input_type": "selectbox",
                     "label": "배틀 타입",
-                    "item_type_options": ["ATK", "HEAL", "DEF"],
+                    "item_type_options": ["ATTACK", "HEAL", "DEFENSE"],
                     "required": true,
                     "required_error_message": "배틀타입은 필수 입력 항목입니다."
                 },
@@ -83,21 +83,21 @@
                 },
                 "attack": {
                     "input_type": "number_input",
-                    "label": "공격력",
+                    "label": "공격력 (수식 공식 내에서는 ATTACK 으로 표기)",
                     "min_value": 0,
                     "required": true,
                     "required_error_message": "공격력은 필수 입력 항목입니다."
                 },
                 "defense": {
                     "input_type": "number_input",
-                    "label": "방어력",
+                    "label": "방어력 (수식 공식 내에서는 DEFENSE 로 표기)",
                     "min_value": 0,
                     "required": true,
                     "required_error_message": "방어력은 필수 입력 항목입니다."
                 },
                 "heal": {
                     "input_type": "number_input",
-                    "label": "회복력",
+                    "label": "회복력 (스킬 공식 내에서는 HEAL 로 표기)",
                     "min_value": 0,
                     "required": true,
                     "required_error_message": "회복력은 필수 입력 항목입니다."
@@ -167,6 +167,120 @@
                     "required" : false,
                     "input_type" : "text_input",
                     "help": "배틀 사용시 아이템 공식입니다. HEAL 시 회복되는 수치 (숫자로 표기 ex. 30) / BUFF 해당 턴 강화 효괴 (예시 : 1.2 배일 경우 *1.2 로 기입, 30 데미지 업은 + 30 으로 기입)"
+                }
+            }
+        }
+    },
+    "MasterUserActiveSkillManagement" : {
+        "create_update_user_active_skill" : {
+            "form" : {
+                "user_name": {
+                    "label" : "스킬 사용 유저",
+                    "required_error_message": "스킬 사용 유저는 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "selectbox",
+                    "item_type_options" : {
+                        "api_path" : "user/master",
+                        "data" : {
+                            "comu_id" : "session.comu_id"
+                        },
+                        "value_column" : "user_name",
+                        "collection_name" : "user_master"
+                    },
+                    "help": "해당 스킬을 사용하는 유저입니다."
+                },
+                "active_skill_name": {
+                    "label" : "스킬 이름",
+                    "required_error_message": "스킬 이름은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "text_input"
+                },
+                "active_skill_type": {
+                    "label" : "스킬 타입",
+                    "required_error_message": "스킬 타입은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "selectbox",
+                    "item_type_options" : [
+                        "ATTACK", "HEAL", "DEFENSE", "BS_CLEAR", "INCREASE_HATE", "DECREASE_HATE"
+                    ],
+                    "help": "스킬 종류입니다. ATTACK : 공격 / HEAL : 회복 / DEFENSE : 방어 / BS_CLEAR : 디버프 해제 / GET_HATE : 헤이트 수치 증가 / DECREASE_HATE : 헤이트 수치 감소"
+                },
+                "active_skill_formula": {
+                    "label" : "스킬 공식",
+                    "required" : false,
+                    "input_type" : "text_input",
+                    "help": "스킬의 공식입니다. ATTACK * 2 혹은 HEAL * 1.2, DEFENSE + 30 와 같이 수식으로 적는 것, 30 과 같이 확정적인 수치를 넣는 것도 가능합니다."
+                },
+                "active_skill_scope": {
+                   "label" : "스킬 범위",
+                    "required_error_message": "스킬 범위는 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "selectbox",
+                    "item_type_options" : [
+                        "ALL_ENEMY", "ONE_ENEMY", "ALL_PARTY", "ONE_PARTY", "ME"
+                    ],
+                    "help": "스킬 범위 입니다. ALL_ENEMY : 적 전체 / ONE_ENEMY : 단일 적 / ALL_PARTY : 아군 전체 / ONE_PARTY : 단일 아군 / ME : 자기 자신"
+                },
+                "active_skill_hate": {
+                    "label" : "헤이트 수치",
+                    "required_error_message": "헤이트 수치는 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "number_input",
+                    "min_value" : 0,
+                    "help": "스킬을 사용할 때 늘어나는 헤이트 수치입니다. 최종 헤이트 수치는 해당 헤이트 수치 + 스킬 결과값 으로 계산됩니다."
+                },
+                "active_skill_description": {
+                    "label" : "스킬 설명",
+                    "required_error_message": "스킬 설명은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" :"text_area" 
+                }
+            }
+        }
+    },
+    "MasterMonsterManagement" : {
+        "create_update_monster" : {
+            "form" : {
+                "monster_name": {
+                    "input_type": "text_input",
+                    "label": "몬스터 이름",
+                    "required": true,
+                    "required_error_message": "몬스터 이름은 필수 입력 항목입니다.",
+                    "placeholder": "Monster Name"
+                },
+                "monster_description": {
+                    "label" : "몬스터 설명",
+                    "required_error_message": "몬스터 설명은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" :"text_area" 
+                },
+                "max_hp": {
+                    "input_type": "number_input",
+                    "label": "최대 체력",
+                    "min_value": 0,
+                    "required": true,
+                    "required_error_message": "최대 체력은 필수 입력 항목입니다."
+                },
+                "attack": {
+                    "input_type": "number_input",
+                    "label": "공격력 (수식 공식 내에서는 ATTACK 으로 표기)",
+                    "min_value": 0,
+                    "required": true,
+                    "required_error_message": "공격력은 필수 입력 항목입니다."
+                },
+                "defense": {
+                    "input_type": "number_input",
+                    "label": "방어력 (수식 공식 내에서는 DEFENSE 로 표기)",
+                    "min_value": 0,
+                    "required": true,
+                    "required_error_message": "방어력은 필수 입력 항목입니다."
+                },
+                "heal": {
+                    "input_type": "number_input",
+                    "label": "회복력 (스킬 공식 내에서는 HEAL 로 표기)",
+                    "min_value": 0,
+                    "required": true,
+                    "required_error_message": "회복력은 필수 입력 항목입니다."
                 }
             }
         }

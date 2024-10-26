@@ -128,7 +128,7 @@ class MasterRewardManagement:
                 if response:
                     st.session_state['current_page'] = 'read_delete_user_master'
                     st.session_state['selected_row'] = None
-                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("보삭 업데이트를")
+                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("보상 업데이트를")
                     st.session_state['prior_status'] = "success"
                     st.rerun()
                 else:
@@ -137,7 +137,7 @@ class MasterRewardManagement:
                 response = api.make_request(api_path, data=send_dict, method='POST')
                 if response:
                     st.session_state['current_page'] = 'read_delete_user_master'
-                    st.session_state['selected_item'] = None
+                    st.session_state['selected_row'] = None
                     st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("보상 추가를")
                     st.session_state['prior_status'] = "success"
                     st.rerun()

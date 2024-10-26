@@ -106,5 +106,84 @@
                 }
             }
         }
+    },
+    "MasterUserActiveSkillManagement" : {
+        "read_delete_user_active_skill" : {
+            "table" : {
+                "selected" : {
+                    "column_type": "checkbox",
+                    "label": "선택",
+                    "width": "small",
+                    "disabled" : false
+                },
+                "user_name": {
+                    "column_type": "text",
+                    "label": "스킬 사용자",
+                    "width": "small"
+                },
+                "active_skill_name": {
+                    "column_type": "text",
+                    "label": "스킬 이름",
+                    "width": "small"
+                },
+                "active_skill_type": {
+                    "column_type": "text",
+                    "label": "스킬 타입",
+                    "width": "small"
+                },
+                "active_skill_formula": {
+                    "column_type": "text",
+                    "label": "스킬 공식",
+                    "width": "small"
+                },
+                "active_skill_scope": {
+                    "column_type": "text",
+                    "label": "스킬 범위",
+                    "width": "small"
+                },
+                "active_skill_hate": {
+                    "column_type": "text",
+                    "label": "스킬 헤이트",
+                    "width": "small"
+                }
+            }
+        }
+    },
+    "MasterMonsterManagement": {
+        "read_delete_monster" : {
+            "table": {
+                "selected" : {
+                    "column_type": "checkbox",
+                    "label": "선택",
+                    "width": "small",
+                    "disabled" : false
+                },
+                "monster_name": {
+                    "column_type": "text",
+                    "label": "이름",
+                    "width": "small"
+                },
+                "max_hp": {
+                    "column_type": "text",
+                    "label": "최대 체력",
+                    "width": "small"
+                },
+                "attack": {
+                    "column_type": "text",
+                    "label": "공격력",
+                    "width": "small"
+                },
+                "defense": {
+                    "column_type": "text",
+                    "label": "방어력",
+                    "width": "small"
+                },
+                "heal": {
+                    "column_type": "text",
+                    "label": "회복력",
+                    "width": "small"
+                }
+            }
+        }
     }
 }

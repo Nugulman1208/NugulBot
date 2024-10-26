@@ -5,6 +5,8 @@ from authentification import Authorization
 from master_user_management import MasterUserManagement
 from master_reward_management import MasterRewardManagement
 from master_item_management import MasterItemManagement
+from master_user_active_skill_management import MasterUserActiveSkillManagement
+from master_monster_management import MasterMonsterManagement
 
 # 메인 화면
 def main():
@@ -28,7 +30,10 @@ def main():
     else:
         st.sidebar.title("메타 데이터 입력")
 
-        options = ["사용자", "보상", "아이템", "패시브", "액티브", "전투보기"]
+        user_active_skill_option = "유저 액티브 스킬"
+        monster_option = "몬스터 정보"
+
+        options = ["사용자", "보상", "아이템", "패시브", user_active_skill_option, monster_option, "전투보기"]
 
         select = st.sidebar.radio("메뉴", options)
 
@@ -55,6 +60,24 @@ def main():
                 page.rendering_page("read_delete_item")
             else:
                 page.rendering_page(st.session_state['current_page'])
+
+        if select == user_active_skill_option:
+            page = MasterUserActiveSkillManagement("nugulweb.form.properties.json", "nugulweb.table.properties.json", "nugulweb.message.properties.json")
+
+            if st.session_state['current_page'] != "create_update_user_active_skill":
+                page.rendering_page("read_delete_user_active_skill")
+            else:
+                page.rendering_page(st.session_state['current_page'])
+
+        if select == monster_option:
+            page = MasterMonsterManagement("nugulweb.form.properties.json", "nugulweb.table.properties.json", "nugulweb.message.properties.json")
+
+            if st.session_state['current_page'] != "create_update_monster":
+                page.rendering_page("read_delete_monster")
+            else:
+                page.rendering_page(st.session_state['current_page'])
+
+        
 
 
 

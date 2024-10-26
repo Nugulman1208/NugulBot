@@ -136,7 +136,7 @@ class MasterUserManagement:
                 response = api.make_request("user/master", data=send_dict, method='POST')
                 if response:
                     st.session_state['current_page'] = 'read_delete_user_master'
-                    st.session_state['selected_item'] = None
+                    st.session_state['selected_row'] = None
                     st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("유저 추가를")
                     st.session_state['prior_status'] = "success"
                     st.rerun()

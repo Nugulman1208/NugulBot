@@ -2,6 +2,7 @@ import os
 import json
 import streamlit as st
 import pandas as pd
+from api_client import APIClient
 
 class PropertyLoader:
     def __init__(self, json_name: str):
@@ -34,6 +35,7 @@ class UtilRenderer:
 class FormRenderer:
     def __init__(self, form_loader: 'PropertyLoader'):
         self.form_loader = form_loader
+        self.api_url = st.secrets["API_URL"]
 
     def render(self, path: str, value_dict: dict = {}) -> dict:
         form_structure = self.form_loader.get_property(path)
@@ -105,6 +107,28 @@ class FormRenderer:
         if input_type == 'selectbox':
             options = options or properties.get('item_type_options', [])
 
+            if isinstance(options, dict):
+                api_path = options['api_path']
+                data = options['data']
+                value_column = options['value_column']
+                collection_name = options['collection_name']
+
+                new_options = list()
+
+                for k, v in data.items():
+                    if isinstance(v, str) and "session." in v:
+                        key_of_state = v.replace("session.", "")
+                        data[k] = st.session_state[key_of_state]
+
+                api = APIClient(self.api_url)
+                data_list = api.make_request(api_path, data=data)
+                data_list = data_list.get(collection_name + "_list")
+
+                for d in data_list:
+                    new_options.append(d.get(value_column))
+                    
+                options = new_options
+                
             # 값이 유효한지 검사하고 기본값 설정
             if not value or value not in options:
                 index = 0

@@ -35,5 +35,21 @@
         "create_update_item" : {
             "title" : "아이템 마스터 생성/수정"
         }
+    },
+    "MasterUserActiveSkillManagement" : {
+        "read_delete_user_active_skill" : {
+            "title" : "유저 액티브 마스터"
+        },
+        "create_update_user_active_skill" : {
+            "title" : "유저 액티브 스킬 생성/수정"
+        }
+    },
+    "MasterMonsterManagement" : {
+        "read_delete_monster" : {
+            "title" : "몬스터 마스터"
+        },
+        "create_update_monster" : {
+            "title" : "몬스터 생성/수정"
+        }
     }
 }

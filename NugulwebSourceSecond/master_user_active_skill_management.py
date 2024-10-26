@@ -3,21 +3,30 @@ import pandas as pd
 import streamlit as st
 from api_client import APIClient
 
-class MasterItemManagement:
+class MasterUserActiveSkillManagement:
     def __init__(self, form_properties: str, data_editor_properties: str, message_properties : str):
         self.form_loader = PropertyLoader(form_properties)
         self.data_editor_loader = PropertyLoader(data_editor_properties)
         self.message_loader = PropertyLoader(message_properties)
         self.api_url = st.secrets["API_URL"]
 
-    def read_delete_item(self):
-        st.session_state['current_page'] = "read_delete_item"
+    def rendering_page(self, page_name: str):
+        # getattr을 사용하여 안전하게 메서드 호출
+        method = getattr(self, page_name, None)
+        if callable(method):
+            method()
+        else:
+            st.error(f"'{page_name}' 페이지를 찾을 수 없습니다.")
+
+    def read_delete_user_active_skill(self):
+        st.session_state['current_page'] = "read_delete_user_active_skill"
         comu_id = st.session_state['comu_id']
         server_id = st.session_state['server_id']
         
-        basic_path = "MasterItemManagement.read_delete_item."
+        basic_path = "MasterUserActiveSkillManagement.read_delete_user_active_skill."
         common_basic_path = "common."
-        api_path = "item"
+        api_path = "user/skill/active"
+        collection_name = "user_active_skill"
 
         st.title(self.message_loader.get_property(basic_path + "title"))
 
@@ -37,8 +46,8 @@ class MasterItemManagement:
 
         selected_row = list()
 
-        if data_list is not None and f'{api_path}_list' in data_list.keys():
-            value_df = pd.DataFrame(data_list[f'{api_path}_list'])
+        if data_list is not None and f'{collection_name}_list' in data_list.keys():
+            value_df = pd.DataFrame(data_list[f'{collection_name}_list'])
             value_df.insert(0, 'selected', False)
         
             data_editor_renderer = DataEditorRenderer(self.data_editor_loader)
@@ -50,11 +59,11 @@ class MasterItemManagement:
 
         if submit_button:
             if len(selected_row) == 0:
-                st.session_state['current_page'] = 'create_update_item'
+                st.session_state['current_page'] = 'create_update_user_active_skill'
                 st.session_state['selected_row'] = None
                 st.rerun()
             elif len(selected_row) == 1:
-                st.session_state['current_page'] = 'create_update_item'
+                st.session_state['current_page'] = 'create_update_user_active_skill'
                 st.session_state['selected_row'] = selected_row[0]
                 st.rerun()
             else:
@@ -76,22 +85,20 @@ class MasterItemManagement:
                         delete_flag = False
                 
                 if delete_flag:
-                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("아이템 삭제를")
+                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("유저 스킬 삭제를")
                     st.session_state['prior_status'] = "success"
                     st.rerun()
                 else:
-                    self.message_loader.get_property("common.message.error").format("아이템 삭제를")
+                    self.message_loader.get_property("common.message.error").format("유저 스킬 삭제를")
 
-
-
-    def create_update_item(self):
-        st.session_state['current_page'] = "create_update_item"
+    def create_update_user_active_skill(self):
+        st.session_state['current_page'] = "create_update_user_active_skill"
         comu_id = st.session_state['comu_id']
         server_id = st.session_state['server_id']
         
-        basic_path = "MasterItemManagement.create_update_item."
+        basic_path = "MasterUserActiveSkillManagement.create_update_user_active_skill."
         common_basic_path = "common."
-        api_path = "item"
+        api_path = "user/skill/active"
 
         st.title(self.message_loader.get_property(basic_path + "title"))
 
@@ -105,7 +112,7 @@ class MasterItemManagement:
             back_button = st.button(self.message_loader.get_property(common_basic_path+"button.back"), key="back_button")
 
         if back_button:
-            st.session_state['current_page'] = 'read_delete_item'
+            st.session_state['current_page'] = 'read_delete_user_active_skill'
             st.session_state['selected_row'] = None
             st.rerun()
 
@@ -126,30 +133,20 @@ class MasterItemManagement:
             if send_dict.get('_id', None):
                 response = api.make_request(f"{api_path}/{send_dict['_id']}", data=send_dict, method='PUT')
                 if response:
-                    st.session_state['current_page'] = 'read_delete_user_master'
+                    st.session_state['current_page'] = 'read_delete_user_active_skill'
                     st.session_state['selected_row'] = None
-                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("아이템 업데이트를")
+                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("유저 스킬 업데이트를")
                     st.session_state['prior_status'] = "success"
                     st.rerun()
                 else:
-                    UtilRenderer.show_message(self.message_loader.get_property("common.message.error").format("아이템 업데이트를"), "error")
+                    UtilRenderer.show_message(self.message_loader.get_property("common.message.error").format("유저 스킬 업데이트를"), "error")
             else:
                 response = api.make_request(api_path, data=send_dict, method='POST')
                 if response:
-                    st.session_state['current_page'] = 'read_delete_user_master'
+                    st.session_state['current_page'] = 'read_delete_user_active_skill'
                     st.session_state['selected_row'] = None
-                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("아이템 추가를")
+                    st.session_state['prior_message'] = self.message_loader.get_property("common.message.success").format("유저 스킬 추가를")
                     st.session_state['prior_status'] = "success"
                     st.rerun()
                 else:
-                    UtilRenderer.show_message(self.message_loader.get_property("common.message.error").format("아이템 추가를"), "error")
-
-
-
-    def rendering_page(self, page_name: str):
-        # getattr을 사용하여 안전하게 메서드 호출
-        method = getattr(self, page_name, None)
-        if callable(method):
-            method()
-        else:
-            st.error(f"'{page_name}' 페이지를 찾을 수 없습니다.")
+                    UtilRenderer.show_message(self.message_loader.get_property("common.message.error").format("유저 스킬 추가를"), "error")

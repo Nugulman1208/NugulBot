@@ -437,3 +437,225 @@ async def delete_item(row_id: str):
         await session.end_session()  # 세션 종료
 
     return {"message": "Item delete successfully", "status" : "success", "message" : "아이템 데이터 삭제에 성공했습니다."}
+
+
+# 유저 액티브 스킬 데이터 모델
+class ActiveSkill(BaseModel):
+    user_name : Optional[str] = None
+    active_skill_name: str
+    active_skill_description: str
+    active_skill_type: str
+    active_skill_formula : Optional[str] = None
+    active_skill_scope : str
+    active_skill_hate : int
+    active_skill_turn : Optional[int] = None
+    comu_id : str
+    server_id : str
+
+@app.get("/user/skill/active")
+async def read_user_active_skill(comu_id : str):
+    session = None
+    collection_name = "user_active_skill"
+    data_list = await db_manager.find_documents(session, collection_name, {"comu_id": comu_id, "del_flag" : False})
+
+    serialized_dict = [serialized_data(data) for data in data_list]
+    return {f"{collection_name}_list": serialized_dict}
+
+# 보상 마스터 데이터 생성
+@app.post("/user/skill/active")
+async def create_user_active_skill(form_data: ActiveSkill):
+    session = await db_manager.client.start_session()
+    send_data = form_data.dict()
+    send_data['active_skill_type'] = send_data['active_skill_type'].lower()
+    comu_id = send_data['comu_id']
+
+    collection_name = "user_active_skill"
+
+    try:
+        session.start_transaction()
+        send_data['del_flag'] = False
+
+        user_name = send_data['user_name']
+        user_document = await db_manager.find_one_document(session, "user_master", {"comu_id": comu_id, "del_flag" : False, "user_name" : user_name})
+        user_id = user_document.get("user_id", None)
+
+        if user_id:
+            send_data['user_id'] = user_id
+
+        created_id = await db_manager.create_one_document(session, collection_name, send_data)
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "Item created successfully", f"{collection_name}_id": str(created_id), "status" : "success", "message" : "유저 액티브 스킬 생성에 성공했습니다."}
+
+@app.put("/user/skill/active/{row_id}")
+async def update_user_active_skill(row_id: str, form_data: ActiveSkill):
+    session = await db_manager.client.start_session()
+    send_data = form_data.dict()
+    send_data['active_skill_type'] = send_data['active_skill_type'].lower()
+    collection_name = "user_active_skill"
+
+    try:
+        session.start_transaction()
+
+        document = await db_manager.find_one_document(session, collection_name, {"_id": ObjectId(row_id)})
+        if document:
+            result = await db_manager.update_one_document(session, collection_name, {"_id": ObjectId(row_id)}, send_data)
+        else:
+            raise HTTPException(status_code=404, detail="User Active Skill is not found")
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "User Active Skill updated successfully", "status" : "success", "message" : "유저 액티브 스킬 생성에 성공했습니다."}
+
+
+@app.delete("/user/skill/active/{row_id}")
+async def delete_user_active_skill(row_id: str):
+    session = await db_manager.client.start_session()
+    collection_name = "user_active_skill"
+
+    try:
+        session.start_transaction()
+
+        document = await db_manager.find_one_document(session, collection_name, {"_id": ObjectId(row_id)})
+        if document:
+            document['del_flag'] = True
+            result = await db_manager.update_one_document(session, collection_name, {"_id": ObjectId(row_id)}, document)
+        else:
+            raise HTTPException(status_code=404, detail="User Active Skill is not found")
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "User Active Skill delete successfully", "status" : "success", "message" : "유저 엑티브 스킬 삭제에 성공했습니다."}
+
+
+# 몬스터 데이터 모델
+class Monster(BaseModel):
+    monster_name: str
+    monster_description: str
+    max_hp : int
+    attack : int
+    defense : int
+    heal : int
+    comu_id : str
+    server_id : str
+
+@app.get("/monster")
+async def read_monster(comu_id : str):
+    session = None
+    collection_name = "monster"
+    data_list = await db_manager.find_documents(session, collection_name, {"comu_id": comu_id, "del_flag" : False})
+
+    serialized_dict = [serialized_data(data) for data in data_list]
+    return {f"{collection_name}_list": serialized_dict}
+
+# 보상 마스터 데이터 생성
+@app.post("/monster")
+async def create_monster(form_data: Monster):
+    session = await db_manager.client.start_session()
+    send_data = form_data.dict()
+
+    collection_name = "monster"
+
+    try:
+        session.start_transaction()
+        send_data['del_flag'] = False
+
+        created_id = await db_manager.create_one_document(session, collection_name, send_data)
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "Monster created successfully", f"{collection_name}_id": str(created_id), "status" : "success", "message" : "몬스터 생성에 성공했습니다."}
+
+@app.put("/monster/{row_id}")
+async def update_monster(row_id: str, form_data: Monster):
+    session = await db_manager.client.start_session()
+    send_data = form_data.dict()
+    collection_name = "monster"
+
+    try:
+        session.start_transaction()
+
+        document = await db_manager.find_one_document(session, collection_name, {"_id": ObjectId(row_id)})
+        if document:
+            result = await db_manager.update_one_document(session, collection_name, {"_id": ObjectId(row_id)}, send_data)
+        else:
+            raise HTTPException(status_code=404, detail="Monster Master not found")
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "Monster updated successfully", "status" : "success", "message" : "몬스터 데이터 업데이트에 성공했습니다."}
+
+
+@app.delete("/monster/{row_id}")
+async def delete_monster(row_id: str):
+    session = await db_manager.client.start_session()
+    collection_name = "monster"
+
+    try:
+        session.start_transaction()
+
+        document = await db_manager.find_one_document(session, collection_name, {"_id": ObjectId(row_id)})
+        if document:
+            document['del_flag'] = True
+            result = await db_manager.update_one_document(session, collection_name, {"_id": ObjectId(row_id)}, document)
+        else:
+            raise HTTPException(status_code=404, detail="Monster Master not found")
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "Monster delete successfully", "status" : "success", "message" : "몬스터 데이터 삭제에 성공했습니다."}
