@@ -185,5 +185,42 @@
                 }
             }
         }
+    },
+    "MasterMonsterActiveSkillManagement" : {
+        "read_delete_monster_active_skill" : {
+            "table" : {
+                "selected" : {
+                    "column_type": "checkbox",
+                    "label": "선택",
+                    "width": "small",
+                    "disabled" : false
+                },
+                "monster_name": {
+                    "column_type": "text",
+                    "label": "사용 몬스터",
+                    "width": "small"
+                },
+                "active_skill_name": {
+                    "column_type": "text",
+                    "label": "스킬 이름",
+                    "width": "small"
+                },
+                "active_skill_type": {
+                    "column_type": "text",
+                    "label": "스킬 타입",
+                    "width": "small"
+                },
+                "active_skill_formula": {
+                    "column_type": "text",
+                    "label": "스킬 공식",
+                    "width": "small"
+                },
+                "active_skill_scope": {
+                    "column_type": "text",
+                    "label": "스킬 범위",
+                    "width": "small"
+                }
+            }
+        }
     }
 }

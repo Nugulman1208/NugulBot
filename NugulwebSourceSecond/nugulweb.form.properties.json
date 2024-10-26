@@ -284,5 +284,64 @@
                 }
             }
         }
+    },
+    "MasterMonsterActiveSkillManagement" : {
+        "create_update_monster_active_skill" : {
+            "form" : {
+                "monster_name": {
+                    "label" : "스킬 사용 몬스터",
+                    "required_error_message": "스킬 사용 몬스터는 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "selectbox",
+                    "item_type_options" : {
+                        "api_path" : "monster",
+                        "data" : {
+                            "comu_id" : "session.comu_id"
+                        },
+                        "value_column" : "monster_name",
+                        "collection_name" : "monster"
+                    },
+                    "help": "해당 스킬을 사용하는 몬스터 입니다."
+                },
+                "active_skill_name": {
+                    "label" : "스킬 이름",
+                    "required_error_message": "스킬 이름은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "text_input"
+                },
+                "active_skill_type": {
+                    "label" : "스킬 타입",
+                    "required_error_message": "스킬 타입은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "selectbox",
+                    "item_type_options" : [
+                        "ATTACK", "HEAL", "DEFENSE", "BS_CLEAR", "INCREASE_HATE", "DECREASE_HATE"
+                    ],
+                    "help": "스킬 종류입니다. ATTACK : 공격 / HEAL : 회복 / DEFENSE : 방어 / BS_CLEAR : 디버프 해제 / GET_HATE : 헤이트 수치 증가 / DECREASE_HATE : 헤이트 수치 감소"
+                },
+                "active_skill_formula": {
+                    "label" : "스킬 공식",
+                    "required" : false,
+                    "input_type" : "text_input",
+                    "help": "스킬의 공식입니다. ATTACK * 2 혹은 HEAL * 1.2, DEFENSE + 30 와 같이 수식으로 적는 것, 30 과 같이 확정적인 수치를 넣는 것도 가능합니다."
+                },
+                "active_skill_scope": {
+                   "label" : "스킬 범위",
+                    "required_error_message": "스킬 범위는 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" : "selectbox",
+                    "item_type_options" : [
+                        "ALL_ENEMY", "ONE_ENEMY", "ALL_PARTY", "ONE_PARTY", "ME"
+                    ],
+                    "help": "스킬 범위 입니다. ALL_ENEMY : 적 전체 / ONE_ENEMY : 단일 적 / ALL_PARTY : 아군 전체 / ONE_PARTY : 단일 아군 / ME : 자기 자신"
+                },
+                "active_skill_description": {
+                    "label" : "스킬 설명",
+                    "required_error_message": "스킬 설명은 필수 입력 항목입니다.",
+                    "required" : true,
+                    "input_type" :"text_area" 
+                }
+            }
+        }
     }
 }
