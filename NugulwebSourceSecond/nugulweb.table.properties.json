@@ -222,5 +222,26 @@
                 }
             }
         }
+    },
+    "MasterBattleManagement" : {
+        "battle_monitoring" : {
+            "table" : {
+                "action_bahavior" : {
+                    "column_type": "text",
+                    "label": "행위자",
+                    "width": "small"
+                },
+                "action_type" : {
+                    "column_type": "text",
+                    "label": "스킬 타입",
+                    "width": "small"
+                },
+                "action_description" : {
+                    "column_type": "text",
+                    "label": "로그",
+                    "width": "large"
+                }
+            }
+        }
     }
 }

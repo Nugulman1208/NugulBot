@@ -262,9 +262,11 @@ class BattleBot(commands.Cog):
                             "current_turn" : battle_data.get("current_turn"),
                             "battle_id" : battle_data.get("_id"),
                             "action_time" : now,
-                            "action_behavior" : user_calculate_data.get("user_name"),
+                            "action_behavior_name" : user_calculate_data.get("user_name"),
                             "action_bahavior_user_id" : user_calculate_data.get("user_id"),
-                            "action_target" : target.get(target_name_column),
+                            "action_behavior_type" : "user",
+                            "action_target_type" : "monster",
+                            "action_target_name" : target.get(target_name_column),
                             "action_type" : user_active_skill_data['active_skill_type'],
                             "action_result" : formula_result,
                             "action_description" : action_description

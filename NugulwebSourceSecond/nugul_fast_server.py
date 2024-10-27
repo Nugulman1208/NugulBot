@@ -794,6 +794,45 @@ async def read_battle(comu_id : str):
     serialized_dict = [serialized_data(data) for data in data_list]
     return {f"{collection_name}_list": serialized_dict}
 
+@app.get("/battle/log")
+async def read_battle_log(comu_id : str, battle_id : str, current_turn : int):
+    session = None
+    collection_name = "battle_log"
+    data_list = await db_manager.find_documents(session, collection_name, {"comu_id": comu_id, "battle_id" : ObjectId(battle_id), "current_turn" : current_turn})
+
+    send_data_list = list()
+    for data in data_list:
+        send_data = {k : v for k, v in data.items()}
+
+        behavior_type = data.get("action_behavior_type")
+        behavior_collection_name = behavior_type + "_calculate"
+        behavior_name_collumn = behavior_type + "_name"
+        behavior_name = data.get("action_behavior_name")
+
+        behavior_data = await db_manager.find_one_document(session, behavior_collection_name, {"comu_id" : comu_id, behavior_name_collumn : behavior_name, "del_flag" : False})
+        if not behavior_data:
+            raise HTTPException(status_code=404, detail="Behavior Master not found")
+
+        target_type = data.get("action_target_type")
+        target_collection_name = target_type + "_calculate"
+        target_name_collumn = target_type + "_name"
+        target_name = data.get("action_target_name")
+
+        target_data = await db_manager.find_one_document(session, target_collection_name, {"comu_id" : comu_id, target_name_collumn : target_name, "del_flag" : False})
+        if not target_data:
+            raise HTTPException(status_code=404, detail="Target Master not found")
+
+        behavior_description = behavior_name + f"\n(hp : {behavior_data.get("hp")}/ hate : {behavior_data.get("hate", "0")})"
+        send_data['action_behavior'] = behavior_description
+        
+        target_description = target_name + f"\n(hp : {target_data.get("hp")}/ hate : {target_data.get("hate", "0")})"
+        send_data['action_target'] = target_description
+
+        send_data_list.append(send_data)
+
+    serialized_dict = [serialized_data(data) for data in send_data_list]
+    return {f"{collection_name}_list": serialized_dict}
+
 @app.post("/battle")
 async def create_battle(form_data: Battle):
     session = await db_manager.client.start_session()

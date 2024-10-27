@@ -206,7 +206,7 @@ class DataEditorRenderer:
         self.table_loader = table_loader
 
     def render(self, path: str, value_df: pd.DataFrame) -> pd.DataFrame:
-        table_properties = self.table_loader.get_property(path)
+        table_properties = self.table_loader.get_property(path)  # 수정된 부분
         if not isinstance(table_properties, dict):
             return None
 
