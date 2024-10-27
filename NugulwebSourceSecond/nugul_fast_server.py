@@ -805,6 +805,7 @@ async def create_battle(form_data: Battle):
     try:
         session.start_transaction()
         send_data['del_flag'] = False
+        send_data['current_turn'] = 1
 
         battle_validation_data = await db_manager.find_one_document(session, "users", {"comu_id": comu_id, "battle_name" : send_data.get("battle_name")})
         if battle_validation_data:
