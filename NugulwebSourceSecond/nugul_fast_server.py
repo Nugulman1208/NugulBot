@@ -687,6 +687,14 @@ async def create_monster(form_data: Monster):
         session.start_transaction()
         send_data['del_flag'] = False
 
+        document = await db_manager.find_one_document(session, collection_name, {
+            "del_flag" : False,
+            "monster_name" : send_data.get("monster_name")
+        })
+
+        if document:
+            raise  HTTPException(status_code=409, detail="Monster Name already taken") 
+
         created_id = await db_manager.create_one_document(session, collection_name, send_data)
 
         # 트랜잭션 커밋
@@ -746,6 +754,17 @@ async def delete_monster(row_id: str):
         else:
             raise HTTPException(status_code=404, detail="Monster Master not found")
 
+        result = await db_manager.update_documents(
+            session,
+            "monster_active_skill",
+            {
+                "del_flag" : False,
+                "monster_name" : document.get("monster_name")
+            },
+            {
+                "del_flag" : True
+            })
+
         # 트랜잭션 커밋
         await session.commit_transaction()
 
@@ -787,6 +806,10 @@ async def create_battle(form_data: Battle):
         session.start_transaction()
         send_data['del_flag'] = False
 
+        battle_validation_data = await db_manager.find_one_document(session, "users", {"comu_id": comu_id, "battle_name" : send_data.get("battle_name")})
+        if battle_validation_data:
+            raise  HTTPException(status_code=409, detail="Battle Name already taken")
+
         user_document = await db_manager.find_one_document(session, "users", {"comu_id": comu_id})
         if not user_document:
             raise HTTPException(status_code=404, detail="Comunity Master not found")
@@ -795,6 +818,25 @@ async def create_battle(form_data: Battle):
         send_data['channel_id'] = battle_room_channel_id
 
         created_id = await db_manager.create_one_document(session, collection_name, send_data)
+
+        monster_list = send_data.get("monster_list")
+
+        monster_calculate_id_list = list()
+        for monster in monster_list:
+            monster_data = await db_manager.find_one_document(session, "monster", {
+                "del_flag" : False,
+                "monster_name" : monster
+            })
+
+            monster_data['hp'] = monster_data['max_hp']
+            monster_data.pop('_id')
+            monster_data['battle_name'] = send_data['battle_name']
+
+            monster_calculate_id = await db_manager.create_one_document(session, "monster_calculate", monster_data)
+            if monster_calculate_id:
+                monster_calculate_id_list.append(str(monster_calculate_id))
+            else:
+                raise HTTPException(status_code=404, detail="Monster not found")
 
         # 트랜잭션 커밋
         await session.commit_transaction()
@@ -807,7 +849,7 @@ async def create_battle(form_data: Battle):
     finally:
         await session.end_session()  # 세션 종료
 
-    return {"message": "Battle created successfully", "channel_id" : battle_room_channel_id, f"{collection_name}_id": str(created_id), "status" : "success", "message" : "배틀 생성에 성공했습니다."}
+    return {"message": "Battle created successfully", "channel_id" : battle_room_channel_id, f"{collection_name}_id": str(created_id), "status" : "success", "message" : "배틀 생성에 성공했습니다.", "monster_calculate_id" : monster_calculate_id_list}
 
 @app.delete("/battle/{row_id}")
 async def delete_battle(row_id: str):
@@ -823,6 +865,13 @@ async def delete_battle(row_id: str):
             result = await db_manager.update_one_document(session, collection_name, {"_id": ObjectId(row_id)}, document)
         else:
             raise HTTPException(status_code=404, detail="Monster Master not found")
+
+        monster_list = document.get("monster_list")
+
+        monster_calculate_list = await db_manager.update_documents(session, "monster_calculate", {
+            "del_flag" : False,
+            "battle_name" : document.get("battle_name")
+        }, {"del_flag" : True})
 
         # 트랜잭션 커밋
         await session.commit_transaction()

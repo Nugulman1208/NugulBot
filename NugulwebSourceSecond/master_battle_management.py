@@ -111,11 +111,13 @@ class MasterBattleManagement:
 
     def rendering_page(self):
         battle_data = self.get_battle_info()
-        st.session_state['battle_data'] = battle_data
-
+        
         if not battle_data:
             self.create_battle()
         else:
+            st.session_state['battle_data'] = battle_data
+            st.session_state['battle_room_channel_id'] = battle_data.get("channel_id")
+
             self.battle_monitoring()
 
 
