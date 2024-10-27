@@ -873,6 +873,10 @@ async def delete_battle(row_id: str):
             "battle_name" : document.get("battle_name")
         }, {"del_flag" : True})
 
+        user_update_result = await db_manager.update_documents(session, "user_calculate", {
+            "del_flag" : False
+        }, {"hate" : 0})
+
         # 트랜잭션 커밋
         await session.commit_transaction()
 

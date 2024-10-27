@@ -85,6 +85,11 @@ class MasterBattleManagement:
         common_basic_path = "common."
         api_path = "battle"
 
+        if st.session_state.get('prior_message', None) and st.session_state.get('prior_status', None):
+            UtilRenderer.show_message(st.session_state['prior_message'], st.session_state['prior_status'])
+            st.session_state['prior_message'] = None
+            st.session_state['prior_status'] = None
+
         st.title(self.message_loader.get_property(basic_path + "title"))
 
         battle_end_button = st.button(self.message_loader.get_property(basic_path+"button.battle_end"), key="battle_end_button")

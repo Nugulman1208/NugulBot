@@ -25,5 +25,13 @@
   "UserInfoBot.inventory.inventory_header" : "재화 - {money}\n",
   "UserInfoBot.inventory.inventory_item": "{item_name} - {count}개\n",
   "UserInfoBot.inventory.inventory_footer": "이상이 {user_name} 의 인벤토리입니다.",
-  "UserInfoBot.get_slip_data.no_data_found" : "{info_type} 내역을 찾을 수 없습니다."
+  "UserInfoBot.get_slip_data.no_data_found" : "{info_type} 내역을 찾을 수 없습니다.",
+  "BattleBot.common.not_start_battle" : "배틀을 아직 시작하지 않았습니다. 관리자에게 문의 바랍니다.",
+  "BattleBot.common.not_found_active_skill" : "해당 액티브 스킬을 찾을 수 없습니다.",
+  "BattleBot.common.not_found_target" : "타겟을 찾을 수 없습니다. 관리자에게 문의 바랍니다.",
+  "BattleBot.common.not_found_party" : "해당 유저는 존재하지 않는 유저입니다.",
+  "BattleBot.common.not_found_enemy" : "해당 몬스터는 존재하지 않은 몬스터입니다.",
+  "BattleBot.error.battle_log.create" : "배틀 로그 작성에 실패했습니다. 관리자에게 문의 바랍니다.",
+  "BattleBot.error.target_calculate.update" : "타깃의 Calculate 테이블 갱신에 실패했습니다. 관리자에게 문의 바랍니다.",
+  "BattleBot.error.user_calculate.update" : "User Calculate 테이블 갱신에 실패했습니다. 관리자에게 문의 바랍니다."
 }
