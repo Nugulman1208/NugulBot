@@ -746,7 +746,7 @@ def read_inventory():
                     transfer_button = st.button("양도", key = str(i)+"transfer", use_container_width=True)
 
                     if transfer_button:
-                        read_inventory_popup(item.get("_id"))
+                        read_inventory_popupread_inventory_popup
 
 @st.dialog(get_properties(message, 'user.read_inventory.title'))
 def read_inventory_popup(inventory_id : str):

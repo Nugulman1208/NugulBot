@@ -81,7 +81,7 @@ class MasterBattleManagement:
         # 배틀 종료 버튼
         end_battle_button = st.button(self.message_loader.get_property("MasterBattleManagement.battle_monitoring.button.battle_end"), use_container_width=True, type = "primary")
         next_turn_button = st.button(self.message_loader.get_property("MasterBattleManagement.battle_monitoring.button.next_turn"), use_container_width=True)
-        add_action_button =  st.button(self.message_loader.get_property("MasterBattleManagement.battle_monitoring.button.add_action"), use_container_width=True)
+
 
         if end_battle_button:
             battle_id = battle_data.get('_id')
@@ -99,36 +99,89 @@ class MasterBattleManagement:
                     st.rerun()
                 else:
                     UtilRenderer.show_message(self.message_loader.get_property("common.message.error").format("배틀 종료를"), "error")
+        
 
         data_editor_renderer = DataEditorRenderer(self.data_editor_loader)
-        log_container = st.empty()  # st.empty() 컨테이너 생성
 
-        # 주기적으로 battle_log 데이터를 갱신하여 표시
-        while True:
-            send_data = {
-                "comu_id": comu_id,
-                "battle_id": battle_data.get("_id"),
-                "current_turn": battle_data.get("current_turn")
-            }
-            response = api.make_request("battle/log", data=send_data)
-            if response and "battle_log_list" in response.keys():
-                log_df = pd.DataFrame(response['battle_log_list'])
-                if not log_df.empty:
-                    selected_columns  = ["action_behavior", "action_target", "action_type", "action_result"]
-                    log_df = log_df[selected_columns]
+        tab1, tab2 = st.tabs(["몬스터 턴 전송", "도움 턴"])
+        if 'battle_monitoring.next_monster_skill' not in st.session_state.keys():
+            st.session_state['battle_monitoring.next_monster_skill'] = list()
 
-                column_config = {
-                    "action_behavior": st.column_config.TextColumn(width="medium", label = "행위자"),
-                    "action_target": st.column_config.TextColumn(width="medium", label = "타깃"),
-                    "action_type": st.column_config.TextColumn(width="small", label = "스킬타겟"),
-                    "action_result": st.column_config.NumberColumn(width="small", label = "계산결과")
-                }
+        with tab1:
+            # 몬스터 턴 전송 선택지
+            selected_option = self.create_monster_turn()
+
+            # 선택한 옵션이 있으면 상태에 추가
+            if selected_option:
+                st.session_state['battle_monitoring.next_monster_skill'].append(selected_option)
+
+            idx_to_remove = None  # 삭제할 항목의 인덱스
+
+            for idx, selected_option in enumerate(st.session_state['battle_monitoring.next_monster_skill']):
+                container = st.container(border = True)
                 
-                # st.empty() 컨테이너 내부의 데이터를 갱신
-                with log_container:
-                    st.dataframe(log_df, use_container_width  = True, column_config = column_config)
+                with container:
+                    col1, col2 = st.columns([7, 1])
+
+                    with col1:
+                        monster_name = selected_option.get("monster_name")
+                        skill_name = selected_option.get("active_skill_name")
+                        skill_type = selected_option.get("active_skill_type")
+                        option = f"[{monster_name}][{skill_type}] {skill_name}"
+                        st.write(option)
+
+                    with col2:
+                        # 삭제 버튼 생성
+                        if st.button(label="삭제", key=f"delete_btn_{idx}", type="primary", use_container_width=True):
+                            idx_to_remove = idx  # 삭제할 인덱스를 설정
+
+            # 삭제 버튼이 눌린 경우 해당 항목 삭제
+            if idx_to_remove is not None:
+                del st.session_state['battle_monitoring.next_monster_skill'][idx_to_remove]
+                st.rerun()  # 페이지를 리프레시하여 UI를 업데이트
+
+            
+
                 
-            time.sleep(2)  # 2초마다 갱신
+           
+
+    def create_monster_turn(self):
+        st.session_state['current_page'] = "battle_monitoring"
+
+        battle_data = st.session_state.get('battle_data', {})
+        comu_id = st.session_state.get('comu_id')
+        server_id = st.session_state.get('server_id')
+
+        api = APIClient(self.api_url)
+        monster_active_list = api.make_request("monster/skill/active", data={"comu_id": comu_id})
+
+        if monster_active_list and "monster_active_skill_list" in monster_active_list.keys():
+            monster_active_list = monster_active_list.get("monster_active_skill_list")
+
+            select_options = list()
+            select_options_dict = dict()
+
+            for skill in monster_active_list:
+                skill_id = skill.get("_id")
+                monster_name = skill.get("monster_name")
+                skill_name = skill.get("active_skill_name")
+                skill_type = skill.get("active_skill_type")
+
+                option = f"[{monster_name}][{skill_type}] {skill_name}"
+
+                select_options.append(option)
+                select_options_dict[option] = skill
+
+            if select_options and select_options_dict:
+                with st.form(key="next_monster_turn"):
+                    selected_option = st.selectbox("사용 스킬", select_options, key="monster_skill_select")
+                    submitted = st.form_submit_button(label="추가")
+
+                    selected_option = select_options_dict[selected_option]
+
+                    if submitted:
+                        return selected_option
+
 
     def rendering_page(self):
         # session_state에 battle_data가 없는 경우에만 get_battle_info를 호출하여 초기화

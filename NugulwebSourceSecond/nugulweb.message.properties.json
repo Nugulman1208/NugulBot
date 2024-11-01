@@ -65,11 +65,10 @@
             "title" : "전투 생성"
         },
         "battle_monitoring" : {
-            "title" : "전투 모니터링",
+            "title" : "전투 턴 컨트롤",
             "button" : {
                 "battle_end" : "전투 종료",
-                "next_turn" : "다음 턴",
-                "add_action" : "행동추가"
+                "next_turn" : "다음 턴"
             }
         }
     }
