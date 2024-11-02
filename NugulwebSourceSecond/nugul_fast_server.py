@@ -1071,7 +1071,7 @@ async def go_next_turn(form_data: NextTurnProcess):
         sorted_hp = sorted(user_master_document, key=lambda x: x["hp"], reverse=False)
         chunk = "[HP 순서]\n"
         for idx, user in enumerate(sorted_hp):
-            chunk += f"{user.get("user_name")} ({user.get("hp")})"
+            chunk += f"{user.get("user_name")} ({user.get("hp")} / {user.get("max_hp")})"
             if idx != len(sorted_hate) -1:
                 chunk += " → "
         

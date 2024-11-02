@@ -344,6 +344,49 @@ class BattleBot(commands.Cog):
         except Exception as e:
             print(e)
             return []
+
+    @skill.autocomplete('selected')
+    async def selected_autocomplete(self, interaction: discord.Interaction, current: str):
+        try:
+            server_id = str(interaction.guild.id)
+            channel_id = str(interaction.channel.id)
+            user_id = str(interaction.user)
+            
+            # USER_SKILL_NAME을 기준으로 동적으로 선택지 구성
+            user_skill_name = None
+            for data in interaction.data.get("options"):
+                if data.get("name") == "user_skill_name":
+                    user_skill_name = data.get("value")
+
+            async with await self.db_manager.client.start_session() as session:
+                async with session.start_transaction():
+
+                    battle_collection_name = "battle"
+                    battle_query = {"channel_id": channel_id, "server_id": server_id, "del_flag" : False}
+                    battle_data = await self.db_manager.find_one_document(session, battle_collection_name, battle_query)
+
+                    monster_list = battle_data.get("monster_list")
+
+                    user_skill = await self.db_manager.find_one_document(session, "user_active_skill", {
+                        "server_id": server_id,  # server_id로 변경
+                        "user_id": user_id,
+                        "active_skill_name": user_skill_name,
+                        "del_flag" : False
+                    })
+                    
+                    if user_skill.get("active_skill_type", None) == "attack" and user_skill.get("active_skill_scope").startswith("one"):
+                        return [app_commands.Choice(name=monster_name, value=monster_name) for monster_name in monster_list if current.lower() in monster_name.lower()]
+                    elif user_skill.get("active_skill_type", None) in ["heal", "defense"] and user_skill.get("active_skill_scope").startswith("one"):
+                        user_calculate_collection_name = "user_calculate"
+                        user_calculate_query = {"server_id": server_id, "del_flag" : False}
+                        user_calculate_data = await self.db_manager.find_documents(session, user_calculate_collection_name, user_calculate_query)
+
+                        return [app_commands.Choice(name=user.get("user_name"), value=user.get("user_name")) for user in user_calculate_data if current.lower() in user.get("user_name").lower()]
+                    elif user_skill.get("active_skill_scope").startswith("all"):
+                        return [app_commands.Choice(name="auto", value="auto")]
+        except Exception as e:
+            print(e)
+            return []
                 
 
 
