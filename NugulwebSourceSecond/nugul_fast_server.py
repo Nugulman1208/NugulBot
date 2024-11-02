@@ -1057,16 +1057,33 @@ async def go_next_turn(form_data: NextTurnProcess):
         if not user_master_document:
             raise HTTPException(status_code=404, detail="User Master not found")
 
-        user_description = "========================\n"
-        for user in user_master_document:
-            chunk = f"{user.get("user_name")}의 체력 : {user.get("hp")} / {user.get("max_hp")}\n{user.get("user_name")}의 헤이트 : {user.get("hate")}\n\n"
-            user_description += chunk
+        user_description = ""
+        sorted_hate = sorted(user_master_document, key=lambda x: x["hate"], reverse=True)
+        chunk = "[헤이트 순서]\n"
+        for idx, user in enumerate(sorted_hate):
+            chunk += f"{user.get("user_name")} ({user.get("hate")})"
+            if idx != len(sorted_hate) -1:
+                chunk += " → "
+
+        user_description += chunk
+        user_description += "\n"
+
+        sorted_hp = sorted(user_master_document, key=lambda x: x["hp"], reverse=False)
+        chunk = "[HP 순서]\n"
+        for idx, user in enumerate(sorted_hp):
+            chunk += f"{user.get("user_name")} ({user.get("hp")})"
+            if idx != len(sorted_hate) -1:
+                chunk += " → "
+        
+        user_description += chunk
+        user_description += "\n"
 
         monster_master_document = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False})
         monster_master_document = [monster for monster in monster_master_document if monster.get("monster_name") in battle_document.get("monster_list")]
         if not monster_master_document:
             raise HTTPException(status_code=404, detail="Monster Master not found")
 
+        monster_master_document = sorted(monster_master_document, key=lambda x: x["hp"], reverse=True)
         monster_description = "========================\n"
         for monster in monster_master_document:
             chunk = f"{monster.get("monster_name")}의 체력 : {monster.get("hp")} / {monster.get("max_hp")}\n"
