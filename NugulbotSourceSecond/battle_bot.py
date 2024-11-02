@@ -31,12 +31,17 @@ class BattleBot(commands.Cog):
                 action = data.get("action")
                 
                 # Streamlit에서 notify 신호가 오면 지정된 채널에 메시지를 전송
-                if action == "start_battle" or action == "end_battle":
+                if action in {"start_battle", "end_battle", "send_message"}:
                     channel_id = data.get("channel_id")  # 기본 채널 ID 설정
                     channel_id = int(channel_id)
                     channel = self.bot.get_channel(channel_id)
                     if channel:
-                        await channel.send(data.get("message"))
+                        full_message = data.get("message")
+                        
+                        # 메시지를 2000자 이하로 나누어 전송
+                        for i in range(0, len(full_message), 2000):
+                            chunk = full_message[i:i+2000]
+                            await channel.send(chunk)
                     else:
                         print("Channel not found.")
 
@@ -274,6 +279,7 @@ class BattleBot(commands.Cog):
 
                         user_hate += formula_result // 10
                         send_message_list.append(action_description)
+                        action_description += f"\n현재 {user_calculate_data.get("user_name")}의 헤이트 : {user_hate}"
 
                         # 로그 기입
                         battle_log_id = await self.db_manager.create_one_document(session, battle_log_collection_name, battle_log)
@@ -293,6 +299,7 @@ class BattleBot(commands.Cog):
                     # 헤이트 추가
                     user_calculate_update_id = await self.db_manager.update_one_document(session, user_calculate_collection_name, {"_id" : ObjectId(user_calculate_data.get("_id"))}, {"hate" : user_hate})
                     
+
                     if not user_calculate_update_id:
                         await interaction.followup.send(self.messages['BattleBot.error.user_calculate.update'])
                         await session.abort_transaction()

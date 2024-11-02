@@ -929,3 +929,159 @@ async def delete_battle(row_id: str):
         await session.end_session()  # 세션 종료
 
     return {"message": "Battle delete successfully", "status" : "success", "message" : "배틀 삭제에 성공했습니다."}
+
+
+# 다음 턴 생성 클래스
+class NextTurnProcess(BaseModel):
+    battle_id: str
+    server_id: str
+    monster_log : Optional[list] = None
+    npc_log : Optional[list] = None
+    comu_id : str
+
+
+@app.get("/calculate")
+async def get_calculation(comu_id : str, collection_type : str):
+    session = None
+
+    send_list = list()
+    if collection_type == "user":
+        send_list = await db_manager.find_documents(session, "user_calculate", {"comu_id": comu_id, "del_flag" : False})
+        send_list = [send_data for send_data in send_list if send_data.get("user_id")]
+    elif collection_type == "monster":
+        send_list = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False})
+    else:
+        raise HTTPException(status_code=400, detail="Invalid Collection Type")
+
+    serialized_dict = [serialized_data(data) for data in send_list]
+    return {"calculate_list": serialized_dict}
+
+@app.post("/next")
+async def go_next_turn(form_data: NextTurnProcess):
+    session = await db_manager.client.start_session()
+    form_data_dict = form_data.dict()
+
+    battle_id = form_data_dict['battle_id']
+    server_id = form_data_dict.get("server_id")
+    comu_id = form_data_dict['comu_id']
+    monster_log = form_data_dict.get("monster_log")
+
+    try:
+        session.start_transaction()
+
+        # 배틀 정보 찾고
+        battle_document = await db_manager.find_one_document(session, "battle", {"comu_id": comu_id, "del_flag" : False, "_id" : ObjectId(battle_id)})
+        if not battle_document:
+            raise HTTPException(status_code=404, detail="Battle not found")
+
+        # 로그 db 에 올리고
+        log_create_result = await db_manager.create_documents(session, "battle_log", monster_log)
+        if not log_create_result:
+            raise HTTPException(status_code=500, detail="Log Creation Failed")
+
+        # hp 갱신하고
+        for log in monster_log:
+
+            # 사용자 정보 찾고
+            user_master_document = await db_manager.find_documents(session, "user_calculate", {"comu_id": comu_id, "del_flag" : False})
+            user_master_document = [user for user in user_master_document if user.get("user_id")]
+            if not user_master_document:
+                raise HTTPException(status_code=404, detail="User Master not found")
+
+            # 몬스터 정보 찾고
+            monster_master_document = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False})
+            monster_master_document = [monster for monster in monster_master_document if monster.get("monster_name") in battle_document.get("monster_list")]
+            if not monster_master_document:
+                raise HTTPException(status_code=404, detail="Monster Master not found")
+
+
+            target_user_id = log.get("action_target_user_id", None)
+            update = dict()
+            query = dict()
+
+            if target_user_id:
+                target_collection = "user_calculate"
+                target = [user for user in user_master_document if user.get("user_id") == target_user_id]
+                if not target:
+                    raise HTTPException(status_code=404, detail=f"User({target_user_id}) not found")
+                target = target[0]
+
+                query = {
+                    "comu_id" : comu_id,
+                    "user_name" : target.get("user_name"),
+                    "user_id" : target_user_id,
+                    "del_flag" : False
+                }
+            else:
+                target_collection = "monster_calculate"
+                target = [monster for monster in monster_master_document if monster.get("monster_name") == log.get("action_target")]
+                if not target:
+                    raise HTTPException(status_code=404, detail=f"Monster ({log.get("action_target")}) not found")
+
+                target = target[0]
+
+                query = {
+                    "comu_id" : comu_id,
+                    "del_flag" : False,
+                    "monster_name" : target.get("monster_name")
+                }
+
+            
+            if log.get("action_type") == "attack":
+                org_hp = target.get("hp")
+                update_hp = max(0, org_hp - log.get("action_result"))
+                update_data = {
+                    "hp" : update_hp
+                }
+
+            elif log.get("action_type") == "heal":
+                org_hp = target.get("hp")
+                update_hp = min(target.get("max_hp"), org_hp + log.get("action_result"))
+                update_data = {
+                    "hp" : update_hp
+                }
+
+            if query and update_data:
+                update_result = await db_manager.update_one_document(session, target_collection, query, update_data)
+
+        # 턴 바꾸고
+        battle_turn_update_result = await db_manager.update_inc_documents(session, "battle", {"comu_id": comu_id, "del_flag" : False, "_id" : ObjectId(battle_id)}, {"current_turn" : 1})
+        if not battle_turn_update_result:
+            raise HTTPException(status_code=500, detail="Battle Turn Increase Failed")
+
+
+        # 유저 정보 전송 메세지 생성 
+        user_master_document = await db_manager.find_documents(session, "user_calculate", {"comu_id": comu_id, "del_flag" : False})
+        user_master_document = [user for user in user_master_document if user.get("user_id")]
+        if not user_master_document:
+            raise HTTPException(status_code=404, detail="User Master not found")
+
+        user_description = "========================\n"
+        for user in user_master_document:
+            chunk = f"{user.get("user_name")}의 체력 : {user.get("hp")} / {user.get("max_hp")}\n{user.get("user_name")}의 헤이트 : {user.get("hate")}\n"
+            user_description += chunk
+
+        monster_master_document = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False})
+        monster_master_document = [monster for monster in monster_master_document if monster.get("monster_name") in battle_document.get("monster_list")]
+        if not monster_master_document:
+            raise HTTPException(status_code=404, detail="Monster Master not found")
+
+        monster_description = "========================\n"
+        for monster in monster_master_document:
+            chunk = f"{monster.get("monster_name")}의 체력 : {monster.get("hp")} / {monster.get("max_hp")}\n"
+            monster_description += chunk
+
+        # 트랜잭션 커밋
+        await session.commit_transaction()
+
+    except Exception as e:
+        await session.abort_transaction()  # 트랜잭션 롤백
+        print(e)
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+    finally:
+        await session.end_session()  # 세션 종료
+
+    return {"message": "Go next turn successfully", "status" : "success", "monster_description" :monster_description, "user_description" : user_description}
+
+
