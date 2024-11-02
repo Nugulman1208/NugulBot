@@ -96,31 +96,30 @@ class MasterBattleManagement:
                 elif isinstance(log, list):
                     result_log.extend(log)
 
-            if result_log:
-                api_result = api.make_request("next", data={
-                                "comu_id" : comu_id,
-                                "server_id" : server_id,
-                                "monster_log" : result_log,
-                                "battle_id" : str(battle_data.get("_id"))
-                            }, method='POST')
+            api_result = api.make_request("next", data={
+                            "comu_id" : comu_id,
+                            "server_id" : server_id,
+                            "monster_log" : result_log,
+                            "battle_id" : str(battle_data.get("_id"))
+                        }, method='POST')
 
-                if api_result:
-                    final_message = ""
-                    for log in result_log:
-                        final_message += log.get("action_description")
-                    
-                    if api_result.get("user_description", None):
-                        final_message += api_result.get("user_description", None)
+            if api_result:
+                final_message = ""
+                for log in result_log:
+                    final_message += log.get("action_description")
+                
+                if api_result.get("user_description", None):
+                    final_message += api_result.get("user_description", None)
 
-                    if api_result.get("monster_description", None):
-                        final_message += api_result.get("monster_description", None)
-                        final_message += "\n"
+                if api_result.get("monster_description", None):
+                    final_message += api_result.get("monster_description", None)
+                    final_message += "\n"
 
-                    final_message += "턴을 종료 했습니다. 다음 턴으로 넘어가겠습니다."
+                final_message += "턴을 종료 했습니다. 다음 턴으로 넘어가겠습니다."
 
-                    asyncio.run(self.send_websocket_to_discord(st.session_state['battle_room_channel_id'], {"action": "send_message", "message": final_message}))
-                    st.session_state['battle_monitoring.next_monster_skill'] = list()
-                    st.rerun()
+                asyncio.run(self.send_websocket_to_discord(st.session_state['battle_room_channel_id'], {"action": "send_message", "message": final_message}))
+                st.session_state['battle_monitoring.next_monster_skill'] = list()
+                st.rerun()
 
         if end_battle_button:
             battle_id = battle_data.get('_id')

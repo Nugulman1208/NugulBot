@@ -259,6 +259,8 @@ class BattleBot(commands.Cog):
                         now = datetime.datetime.now()
                         now = int(now.timestamp() * 1000)
 
+                        user_hate += formula_result // 10
+
                         battle_log = {
                             "server_id" : server_id,
                             "channel_id" : channel_id,
@@ -276,10 +278,8 @@ class BattleBot(commands.Cog):
                             "action_result" : formula_result,
                             "action_description" : action_description
                         }
-
-                        user_hate += formula_result // 10
+                        
                         send_message_list.append(action_description)
-                        action_description += f"\n현재 {user_calculate_data.get("user_name")}의 헤이트 : {user_hate}"
 
                         # 로그 기입
                         battle_log_id = await self.db_manager.create_one_document(session, battle_log_collection_name, battle_log)
@@ -299,18 +299,23 @@ class BattleBot(commands.Cog):
                     # 헤이트 추가
                     user_calculate_update_id = await self.db_manager.update_one_document(session, user_calculate_collection_name, {"_id" : ObjectId(user_calculate_data.get("_id"))}, {"hate" : user_hate})
                     
-
                     if not user_calculate_update_id:
                         await interaction.followup.send(self.messages['BattleBot.error.user_calculate.update'])
                         await session.abort_transaction()
                         return
 
+                    final_message = ""
                     for message in send_message_list:
-                        if len(message) < 2000:
-                            await interaction.followup.send(message)
-                        else:
-                            for i in range(0, len(message), 1500):
-                                await interaction.followup.send(message[i:i+1500])
+                        final_message += message
+                        final_message += "\n\n"
+
+                    final_message += f"현재 {user_calculate_data.get("user_name")}의 헤이트 : {user_hate}"
+
+                    if len(final_message) < 2000:
+                        await interaction.followup.send(final_message)
+                    else:
+                        for i in range(0, len(final_message), 2000):
+                            await interaction.followup.send(final_message[i:i+2000])
                     await session.commit_transaction()
 
         except Exception as e:

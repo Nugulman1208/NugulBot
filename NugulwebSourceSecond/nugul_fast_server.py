@@ -969,15 +969,17 @@ async def go_next_turn(form_data: NextTurnProcess):
     try:
         session.start_transaction()
 
+       
         # 배틀 정보 찾고
         battle_document = await db_manager.find_one_document(session, "battle", {"comu_id": comu_id, "del_flag" : False, "_id" : ObjectId(battle_id)})
         if not battle_document:
             raise HTTPException(status_code=404, detail="Battle not found")
 
         # 로그 db 에 올리고
-        log_create_result = await db_manager.create_documents(session, "battle_log", monster_log)
-        if not log_create_result:
-            raise HTTPException(status_code=500, detail="Log Creation Failed")
+        if monster_log:
+            log_create_result = await db_manager.create_documents(session, "battle_log", monster_log)
+            if not log_create_result:
+                raise HTTPException(status_code=500, detail="Log Creation Failed")
 
         # hp 갱신하고
         for log in monster_log:
@@ -1049,7 +1051,6 @@ async def go_next_turn(form_data: NextTurnProcess):
         if not battle_turn_update_result:
             raise HTTPException(status_code=500, detail="Battle Turn Increase Failed")
 
-
         # 유저 정보 전송 메세지 생성 
         user_master_document = await db_manager.find_documents(session, "user_calculate", {"comu_id": comu_id, "del_flag" : False})
         user_master_document = [user for user in user_master_document if user.get("user_id")]
@@ -1058,7 +1059,7 @@ async def go_next_turn(form_data: NextTurnProcess):
 
         user_description = "========================\n"
         for user in user_master_document:
-            chunk = f"{user.get("user_name")}의 체력 : {user.get("hp")} / {user.get("max_hp")}\n{user.get("user_name")}의 헤이트 : {user.get("hate")}\n"
+            chunk = f"{user.get("user_name")}의 체력 : {user.get("hp")} / {user.get("max_hp")}\n{user.get("user_name")}의 헤이트 : {user.get("hate")}\n\n"
             user_description += chunk
 
         monster_master_document = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False})
