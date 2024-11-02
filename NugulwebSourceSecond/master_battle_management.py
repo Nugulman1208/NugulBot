@@ -88,9 +88,15 @@ class MasterBattleManagement:
         if next_turn_button:
             next_monster_skill_list = st.session_state['battle_monitoring.next_monster_skill']
 
+            battle_status_data = api.make_request("battle/status", data = {"comu_id" : comu_id, "battle_id" : str(battle_data.get("_id"))})
+            if battle_status_data and "battle_status_list" in battle_status_data.keys():
+                battle_status_data = battle_status_data.get("battle_status_list")
+            else:
+                battle_status_data = list()
+
             result_log = list()
             for monster_skill in next_monster_skill_list:
-                log = self.get_log_monster_turn(monster_skill)
+                log = self.get_log_monster_turn(monster_skill, battle_status_data)
                 if isinstance(log, dict):
                     result_log.append(log)
                 elif isinstance(log, list):
@@ -100,7 +106,8 @@ class MasterBattleManagement:
                             "comu_id" : comu_id,
                             "server_id" : server_id,
                             "monster_log" : result_log,
-                            "battle_id" : str(battle_data.get("_id"))
+                            "battle_id" : str(battle_data.get("_id")),
+                            "battle_status_list" : battle_status_data
                         }, method='POST')
 
             if api_result:
@@ -113,6 +120,10 @@ class MasterBattleManagement:
 
                 if api_result.get("monster_description", None):
                     final_message += api_result.get("monster_description", None)
+                    final_message += "\n"
+
+                if api_result.get("status_description", None):
+                    final_message += api_result.get("status_description", None)
                     final_message += "\n"
 
                 final_message += "턴을 종료 했습니다. 다음 턴으로 넘어가겠습니다."
@@ -221,7 +232,7 @@ class MasterBattleManagement:
                     if submitted:
                         return selected_option
 
-    def get_log_monster_turn(self, selected_skill : dict):
+    def get_log_monster_turn(self, selected_skill : dict, battle_status_data : list = []):
         battle_data = st.session_state.get('battle_data', {})
         comu_id = st.session_state.get('comu_id')
         server_id = st.session_state.get('server_id')
@@ -259,6 +270,7 @@ class MasterBattleManagement:
                 return None
             target_list = target_list.get("calculate_list")
         
+        
         if target_result.startswith("one"):
             standard_target_column_value = -1 * (2 ** 60)
             if target_standard == "min":
@@ -285,13 +297,14 @@ class MasterBattleManagement:
         elif "me" in target_result:
             target_result = behavior_dict
 
+
         if isinstance(target_result, dict):
             if "monster_name" in target_result.keys():
                 target_name = target_result.get("monster_name")
             elif "user_name" in target_result.keys():
                 target_name = target_result.get("user_name")
 
-            dice_result, description = self.calculate_immediate_skill(selected_skill, behavior_dict, target_result)
+            dice_result, description = self.calculate_skill(selected_skill, behavior_dict, target_result, battle_status_data)
 
             now = datetime.datetime.now()
             now = int(now.timestamp() * 1000)
@@ -320,6 +333,7 @@ class MasterBattleManagement:
             return_list = list()
 
             target_name = str()
+            target_status_list = list()
 
             for target in target_list:
                 if "monster_name" in target.keys():
@@ -327,7 +341,8 @@ class MasterBattleManagement:
                 elif "user_name" in target.keys():
                     target_name = target.get("user_name")
 
-                dice_result, description = self.calculate_immediate_skill(selected_skill, behavior_dict, target)
+
+                dice_result, description = self.calculate_skill(selected_skill, behavior_dict, target, battle_status_data)
                 now = datetime.datetime.now()
                 now = int(now.timestamp() * 1000)
 
@@ -351,9 +366,17 @@ class MasterBattleManagement:
                     "action_description" : description
                 })
 
+                target_status_list.extend(target_status_list)
+
             return return_list
                     
 
+    def is_number(self, s):
+        try:
+            float(s)  # 숫자로 변환 시도
+            return True
+        except ValueError:
+            return False
 
     def replace_formula(self, formula: str, stat: dict):
         # 공백 제거 및 소문자로 변환
@@ -371,11 +394,12 @@ class MasterBattleManagement:
             dice_sum += dice_value
         return dice_sum
 
-    def calculate_immediate_skill(self, active_skill_data: dict, behavior_calculate: dict, target_calculate : dict):
-        # formula 내 공백 제거 및 변수 치환
-        formula = active_skill_data.get("active_skill_formula", "0")
+    def calculate_formula(self, formula : str, behavior_calculate : dict):
         if not formula.strip():
             formula = "0"
+
+        if self.is_number(formula):
+            return int(formula)
         formula = self.replace_formula(formula, behavior_calculate)
 
         # 주사위 패턴 정의 및 계산
@@ -388,6 +412,13 @@ class MasterBattleManagement:
             formula = formula.replace(f"dice({dice_count},{dice_face})", str(dice_result), 1)
         # 최종 수식을 평가하여 숫자로 반환
         result = eval(formula)
+        return result
+
+    def calculate_skill(self, active_skill_data: dict, behavior_calculate: dict, target_calculate : dict, battle_status_data : list = []):
+        # formula 내 공백 제거 및 변수 치환
+        formula = active_skill_data.get("active_skill_formula", "0")
+
+        result = self.calculate_formula(formula, behavior_calculate)
 
         # 디스코드로 보낼 description 작성
         description = ""
@@ -397,23 +428,57 @@ class MasterBattleManagement:
         else:
             behavior_name = behavior_calculate.get("monster_name")
 
+        target_status_list = list()
         target_name= ""
         if "user_name" in target_calculate.keys():
             target_name = target_calculate.get("user_name")
+            target_status_list = [status for status in battle_status_data if status.get("status_target") == target_name]
         else:
             target_name = target_calculate.get("monster_name")
+            target_status_list = [status for status in battle_status_data if status.get("status_target") == target_name]
         
         skill_name = active_skill_data.get("active_skill_name")
         skill_type = active_skill_data.get("active_skill_type").lower()
 
+        description = ""
         if skill_type == "attack":
-            description = "[{skill_name} (공격)][{behavior_name} → {target_name}] 최종 데미지 : {result}\n"
+            # target_status : defense 반영
+            for status in target_status_list:
+                if result <= 0:
+                    break
+
+                if status.get("status_type") == "defense":
+                    status_formula = status.get("status_formula")
+
+                    if status_formula <= 0:
+                        continue
+
+                    if result <= status_formula:
+                        status['status_formula'] -= result
+                        description += f"[방어] 데미지 : {result} → 0 (잔여 방어막 : {status['status_formula']})\n"
+                        result = 0
+                        break
+                    else:
+                        org_result = result
+                        result -= status['status_formula']
+                        status['status_formula'] = 0
+                        description += f"[방어] 데미지 : {org_result} → {result} (잔여 방어막 : {status['status_formula']})\n"
+                        status['del_flag'] = True
+
+            description += "[{skill_name} (공격)][{behavior_name} → {target_name}] 최종 데미지 : {result}\n"
             result_hp = max(target_calculate.get('hp') - result, 0)
             target_calculate['hp'] = result_hp
         elif skill_type == "heal":
             description = "[{skill_name} (회복)][{behavior_name} → {target_name}] 최종 회복 : {result}\n"
             result_hp = min(target_calculate.get('max_hp'), target_calculate.get('hp') + result)
             target_calculate['hp'] = result_hp
+
+    
+        org_id_dict = {status["_id"]: status for status in battle_status_data}
+        new_id_dict = {status["_id"]: status for status in target_status_list}
+
+        org_id_dict.update(new_id_dict)
+        battle_status_data = list(org_id_dict.values())
 
         description = description.format(skill_name = skill_name, behavior_name = behavior_name, target_name = target_name, result = str(result))
         return result, description

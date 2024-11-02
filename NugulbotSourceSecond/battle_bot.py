@@ -84,7 +84,7 @@ class BattleBot(commands.Cog):
             
         return formula
 
-    async def calculate_immediate_skill(self, active_skill_data: dict, behavior_calculate: dict, target_calculate : dict):
+    async def calculate_skill(self, active_skill_data: dict, behavior_calculate: dict, target_calculate : dict):
         # formula 내 공백 제거 및 변수 치환
         formula = active_skill_data.get("active_skill_formula", "0")
         if not formula.strip():
@@ -129,6 +129,8 @@ class BattleBot(commands.Cog):
             result_hp = min(target_calculate.get('max_hp'), target_calculate.get('hp') + result)
             description += "{target_name} 잔여 체력 : " + str(result_hp)
             target_calculate['hp'] = result_hp
+        elif skill_type == "defense":
+            description = "[{skill_name} (방어)][{behavior_name} → {target_name}] 최종 방어막 : {result} (2턴)\n"
 
         description = description.format(skill_name = skill_name, behavior_name = behavior_name, target_name = target_name, result = str(result))
         return result, description
@@ -252,9 +254,10 @@ class BattleBot(commands.Cog):
                         formula_result = 0
                         action_description = ""
 
-                        is_immediate = True
-                        if active_skill_type in ["attack", "heal"]:
-                            formula_result, action_description = await self.calculate_immediate_skill(user_active_skill_data, user_calculate_data, target)
+                        battle_update_type = "immediate"
+                        if active_skill_type in ["defense"]:
+                            battle_update_type = "status"
+                        formula_result, action_description = await self.calculate_skill(user_active_skill_data, user_calculate_data, target)
 
                         now = datetime.datetime.now()
                         now = int(now.timestamp() * 1000)
@@ -272,7 +275,7 @@ class BattleBot(commands.Cog):
                             "action_behavior_name" : user_calculate_data.get("user_name"),
                             "action_bahavior_user_id" : user_calculate_data.get("user_id"),
                             "action_behavior_type" : "user",
-                            "action_target_type" : "monster",
+                            "action_target_type" : target_type,
                             "action_target_name" : target.get(target_name_column),
                             "action_type" : user_active_skill_data['active_skill_type'],
                             "action_result" : formula_result,
@@ -288,11 +291,31 @@ class BattleBot(commands.Cog):
                             await session.abort_transaction()
                             return
 
-                        # target 업데이트
-                        if is_immediate:
+                        # target 업데이트 (즉발이면 calculate 에 직접 넣어지고 아니면 battle_status 에 보관 된다.)
+                        if battle_update_type == "immediate":
                             target_update_id = await self.db_manager.update_one_document(session, target_collection_name, {"_id" : ObjectId(target.get("_id"))}, target)
                             if not target_update_id:
                                 await interaction.followup.send(self.messages['BattleBot.error.target_calculate.update'])
+                                await session.abort_transaction()
+                                return
+                        elif battle_update_type == "status":
+                            battle_status_data = {
+                                "server_id" : server_id,
+                                "channel_id" : channel_id,
+                                "comu_id" : user_calculate_data.get("comu_id"),
+                                "battle_name" : battle_data.get("battle_name"),
+                                "battle_id" : ObjectId(str(battle_data.get("_id"))),
+                                "status_type" : active_skill_type,
+                                "status_target_collection_name" : target_collection_name,
+                                "status_formula" : formula_result,
+                                "status_target" : target.get(target_name_column),
+                                "status_end_turn" : battle_data.get("current_turn") + 1,
+                                "del_flag" : False
+                            }
+
+                            target_update_id = await self.db_manager.create_one_document(session, "battle_status", battle_status_data)
+                            if not target_update_id:
+                                await interaction.followup.send(self.messages['BattleBot.error.battle_status.create'])
                                 await session.abort_transaction()
                                 return
 

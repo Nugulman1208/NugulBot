@@ -33,5 +33,6 @@
   "BattleBot.common.not_found_enemy" : "해당 몬스터는 존재하지 않은 몬스터입니다.",
   "BattleBot.error.battle_log.create" : "배틀 로그 작성에 실패했습니다. 관리자에게 문의 바랍니다.",
   "BattleBot.error.target_calculate.update" : "타깃의 Calculate 테이블 갱신에 실패했습니다. 관리자에게 문의 바랍니다.",
-  "BattleBot.error.user_calculate.update" : "User Calculate 테이블 갱신에 실패했습니다. 관리자에게 문의 바랍니다."
+  "BattleBot.error.user_calculate.update" : "User Calculate 테이블 갱신에 실패했습니다. 관리자에게 문의 바랍니다.",
+  "BattleBot.error.battle_status.create" : "Battle Status 테이블 추가에 실패했습니다. 관리자에게 문의 바랍니다."
 }

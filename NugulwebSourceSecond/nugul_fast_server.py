@@ -937,6 +937,7 @@ class NextTurnProcess(BaseModel):
     server_id: str
     monster_log : Optional[list] = None
     npc_log : Optional[list] = None
+    battle_status_list : Optional[list] = None
     comu_id : str
 
 
@@ -956,6 +957,34 @@ async def get_calculation(comu_id : str, collection_type : str):
     serialized_dict = [serialized_data(data) for data in send_list]
     return {"calculate_list": serialized_dict}
 
+@app.get("/battle/status")
+async def get_battle_status(comu_id : str, battle_id : str, status_type : str = None):
+    session = None
+    send_list = list()
+
+    battle_document = await db_manager.find_one_document(session, "battle", {"comu_id": comu_id, "del_flag" : False, "_id" : ObjectId(battle_id)})
+    if not battle_document:
+        raise HTTPException(status_code=404, detail="Battle not found")
+
+    query = {
+        "comu_id" : comu_id,
+        "del_flag" : False,
+        "battle_id" : ObjectId(battle_id),
+        "status_end_turn" :{
+            "$gte" : battle_document.get("current_turn")
+        }
+    }
+
+    if status_type:
+        query['status_type'] = status_type
+
+    send_list = await db_manager.find_documents(session, "battle_status", query)
+
+    serialized_dict = [serialized_data(data) for data in send_list]
+    print(send_list)
+    return {"battle_status_list": serialized_dict}
+
+
 @app.post("/next")
 async def go_next_turn(form_data: NextTurnProcess):
     session = await db_manager.client.start_session()
@@ -965,11 +994,11 @@ async def go_next_turn(form_data: NextTurnProcess):
     server_id = form_data_dict.get("server_id")
     comu_id = form_data_dict['comu_id']
     monster_log = form_data_dict.get("monster_log")
+    battle_status_list = form_data_dict.get("battle_status_list")
 
     try:
         session.start_transaction()
 
-       
         # 배틀 정보 찾고
         battle_document = await db_manager.find_one_document(session, "battle", {"comu_id": comu_id, "del_flag" : False, "_id" : ObjectId(battle_id)})
         if not battle_document:
@@ -1046,6 +1075,12 @@ async def go_next_turn(form_data: NextTurnProcess):
             if query and update_data:
                 update_result = await db_manager.update_one_document(session, target_collection, query, update_data)
 
+        # status 바꾸고
+        for status in battle_status_list:
+            status_id = str(status.pop("_id"))
+            status['battle_id'] = ObjectId(str(status['battle_id']))
+            update_battle_status_result = await db_manager.update_one_document(session,"battle_status", {"_id" : ObjectId(status_id)}, status)
+
         # 턴 바꾸고
         battle_turn_update_result = await db_manager.update_inc_documents(session, "battle", {"comu_id": comu_id, "del_flag" : False, "_id" : ObjectId(battle_id)}, {"current_turn" : 1})
         if not battle_turn_update_result:
@@ -1057,7 +1092,7 @@ async def go_next_turn(form_data: NextTurnProcess):
         if not user_master_document:
             raise HTTPException(status_code=404, detail="User Master not found")
 
-        user_description = ""
+        user_description = "========================\n"
         sorted_hate = sorted(user_master_document, key=lambda x: x["hate"], reverse=True)
         chunk = "[헤이트 순서]\n"
         for idx, user in enumerate(sorted_hate):
@@ -1077,6 +1112,32 @@ async def go_next_turn(form_data: NextTurnProcess):
         
         user_description += chunk
         user_description += "\n"
+
+        # status description 추가
+        status_query = {
+            "comu_id" : comu_id,
+            "battle_id" : ObjectId(str(battle_document.get("_id"))),
+            "del_flag" : False,
+            "status_end_turn" : {
+                "$gte"  : battle_document.get("current_turn", 1) + 1
+            }
+        }
+
+        print(status_query)
+        status_document = await db_manager.find_documents(session, "battle_status", status_query)
+        print(status_document)
+
+        status_description = None
+        if status_document:
+            status_description = "========================\n"
+            for status in status_document:
+                status_type = status.get("status_type")
+                status_target = status.get("status_target")
+                status_end_turn = status.get("status_end_turn")
+                remain_turn = status_end_turn - battle_document.get("current_turn", 1)
+                status_description += f"[{status_type}][{status_target}] {status.get("status_formula")} 방어벽 ({remain_turn} 턴)\n"
+
+
 
         monster_master_document = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False})
         monster_master_document = [monster for monster in monster_master_document if monster.get("monster_name") in battle_document.get("monster_list")]
@@ -1100,6 +1161,7 @@ async def go_next_turn(form_data: NextTurnProcess):
     finally:
         await session.end_session()  # 세션 종료
 
-    return {"message": "Go next turn successfully", "status" : "success", "monster_description" :monster_description, "user_description" : user_description}
+    return {"message": "Go next turn successfully", "status" : "success", "monster_description" :monster_description, "user_description" : user_description, "status_description" : status_description}
+
 
 

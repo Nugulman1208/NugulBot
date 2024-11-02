@@ -78,7 +78,7 @@
                 "battle_type": {
                     "input_type": "selectbox",
                     "label": "배틀 타입",
-                    "item_type_options": ["ATTACK", "HEAL", "DEFENSE"],
+                    "item_type_options": ["attack", "heal", "defense"],
                     "required": true,
                     "required_error_message": "배틀타입은 필수 입력 항목입니다."
                 },
@@ -209,7 +209,7 @@
                     "required" : true,
                     "input_type" : "selectbox",
                     "item_type_options" : [
-                        "ATTACK", "HEAL", "DEFENSE", "BS_CLEAR", "INCREASE_HATE", "DECREASE_HATE"
+                        "attack", "heal", "defense", "bs_clear", "increase_hate", "decrease_hate"
                     ],
                     "help": "스킬 종류입니다. ATTACK : 공격 / HEAL : 회복 / DEFENSE : 방어 / BS_CLEAR : 디버프 해제 / GET_HATE : 헤이트 수치 증가 / DECREASE_HATE : 헤이트 수치 감소"
                 },
@@ -225,7 +225,7 @@
                     "required" : true,
                     "input_type" : "selectbox",
                     "item_type_options" : [
-                        "ALL_ENEMY", "ONE_ENEMY", "ALL_PARTY", "ONE_PARTY", "ME"
+                        "all_enemy", "one_enemy", "all_party", "one_party", "me"
                     ],
                     "help": "스킬 범위 입니다. ALL_ENEMY : 적 전체 / ONE_ENEMY : 단일 적 / ALL_PARTY : 아군 전체 / ONE_PARTY : 단일 아군 / ME : 자기 자신"
                 },
@@ -323,7 +323,7 @@
                     "required" : true,
                     "input_type" : "selectbox",
                     "item_type_options" : [
-                        "ATTACK", "HEAL", "DEFENSE", "BS_CLEAR", "INCREASE_HATE", "DECREASE_HATE"
+                        "attack", "heal", "defense", "bs_clear", "increase_hate", "decrease_hate"
                     ],
                     "help": "스킬 종류입니다. ATTACK : 공격 / HEAL : 회복 / DEFENSE : 방어 / BS_CLEAR : 디버프 해제 / GET_HATE : 헤이트 수치 증가 / DECREASE_HATE : 헤이트 수치 감소"
                 },
