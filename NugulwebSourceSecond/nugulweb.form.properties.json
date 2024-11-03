@@ -229,6 +229,14 @@
                     ],
                     "help": "스킬 범위 입니다. ALL_ENEMY : 적 전체 / ONE_ENEMY : 단일 적 / ALL_PARTY : 아군 전체 / ONE_PARTY : 단일 아군 / ME : 자기 자신"
                 },
+                "active_skill_condition" : {
+                    "label" : "아군 대상 조건",
+                    "input_type" : "multiselect",
+                    "item_type_options" : [
+                        "defense", "heal", "attack"
+                    ],
+                    "help": "아군 대상일 경우 수혜를 받는 대상 (all_party 이면서 defense 이면 탱커만 대상) / 여러개 선택 가능"
+                },
                 "active_skill_hate": {
                     "label" : "헤이트 수치",
                     "input_type" : "number_input",

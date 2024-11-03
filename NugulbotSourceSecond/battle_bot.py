@@ -92,15 +92,16 @@ class BattleBot(commands.Cog):
         formula = await self.replace_formula(formula, behavior_calculate)
 
         # 주사위 패턴 정의 및 계산
-        pattern = r"dice\((\d+),(\d+)\)"
+        pattern = r"dice\(([^,]+),([^,]+)\)"
         matches = re.findall(pattern, formula)
 
         for dice_count, dice_face in matches:
             # 치환된 formula 내에서 dice() 호출
-            dice_result = await self.dice(int(dice_count), int(dice_face))
+            dice_result = await self.dice(int(eval(dice_count)), int(eval(dice_face)))
             formula = formula.replace(f"dice({dice_count},{dice_face})", str(dice_result), 1)
+
         # 최종 수식을 평가하여 숫자로 반환
-        result = eval(formula)
+        result = int(eval(formula))
 
         # 디스코드로 보낼 description 작성
         description = ""
@@ -159,13 +160,13 @@ class BattleBot(commands.Cog):
         elif skill_type == "defense":
             description = "[{skill_name} (방어)][{behavior_name} → {target_name}] 최종 방어막 : {result} (2턴)\n"
         elif skill_type == "increase_hate":
-            org_hate = target_calculate['hate']
+            org_hate = target_calculate.get("hate", 0)
             new_hate = org_hate + result
             description = "[{skill_name} (헤이트 증가)][{behavior_name} → {target_name}] 헤이트 {result} 증가\n"
             description += "{target_name} 헤이트 변화 : " + f"{org_hate} → {new_hate}"
             target_calculate['hate'] = new_hate
         elif skill_type == "decrease_hate":
-            org_hate = target_calculate['hate']
+            org_hate =  target_calculate.get("hate", 0)
             new_hate = max(org_hate - result, 0)
             description = "[{skill_name} (헤이트 감소)][{behavior_name} → {target_name}] 헤이트 {result} 감소\n"
             description += "{target_name} 헤이트 변화 : " + f"{org_hate} → {new_hate}"
@@ -269,8 +270,13 @@ class BattleBot(commands.Cog):
                     target_name_column = target_column_prefix + "name"
                     # (1) 광역
                     if "all" in user_active_skill_data.get("active_skill_scope").lower():
+                        # (1) - 1 아군 대상 광역 + 아군 대상 조건이 존재할 때
                         target_result_name_list = [target.get(target_name_column) for target in target_data_list]
                         target_result_list = [target for target in target_data_list]
+
+                        if target_type == 'party' and user_active_skill_data.get("active_skill_condition"):
+                            active_skill_condition = user_active_skill_data.get("active_skill_condition")
+                            target_result_list = [target for target in target_result_list if target.get("battle_type") in active_skill_condition]
 
                     # (2) 단일
                     elif "one" in user_active_skill_data.get("active_skill_scope").lower():
@@ -327,7 +333,6 @@ class BattleBot(commands.Cog):
                         now = datetime.datetime.now()
                         now = int(now.timestamp() * 1000)
 
-                        
                         if str(user_calculate_data.get("_id")) == str(target.get("_id")):
                             if "increase_hate" == active_skill_type:
                                 user_hate += formula_result
@@ -337,7 +342,7 @@ class BattleBot(commands.Cog):
                                 user_hate += formula_result // 10
                         else:
                             if active_skill_type not in ["increase_hate", "decrease_hate"]:
-                                user_hate += formula_result // 10                            
+                                user_hate += formula_result // 10            
 
                         battle_log = {
                             "server_id" : server_id,
@@ -399,7 +404,6 @@ class BattleBot(commands.Cog):
                         status_id = str(status.pop("_id"))
                         status['battle_id'] = ObjectId(str(status['battle_id']))
                         update_battle_status_result = await self.db_manager.update_one_document(session,"battle_status", {"_id" : ObjectId(status_id)}, status)
-
                     # 헤이트 추가
                     user_calculate_update_id = await self.db_manager.update_one_document(session, user_calculate_collection_name, {"_id" : ObjectId(user_calculate_data.get("_id"))}, {"hate" : user_hate})
                     

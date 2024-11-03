@@ -191,8 +191,10 @@ class FormRenderer:
                 options = new_options
                 
             # 값이 유효한지 검사하고 기본값 설정
-            if not value or value not in options:
+            value = [v for v in value if v in options]
+            if not value:
                 value = []
+
             return st.multiselect(label, options, default=value, help=help_text)
 
         return None

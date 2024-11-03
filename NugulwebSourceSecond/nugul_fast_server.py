@@ -450,6 +450,7 @@ class ActiveSkill(BaseModel):
     active_skill_type: str
     active_skill_formula : Optional[str] = None
     active_skill_scope : str
+    active_skill_condition : Optional[list] = None
     active_skill_hate : Optional[int] = None
     active_skill_turn : Optional[int] = None
     comu_id : str
@@ -481,6 +482,8 @@ async def create_user_active_skill(form_data: ActiveSkill):
     send_data['active_skill_scope'] = send_data['active_skill_scope'].lower()
     if "active_skill_hate" not in send_data.keys():
         send_data['active_skill_hate'] = 0
+    if "active_skill_condition" not in send_data.keys():
+        send_data['active_skill_condition'] = list()
 
     comu_id = send_data['comu_id']
 
@@ -549,6 +552,8 @@ async def update_user_active_skill(row_id: str, form_data: ActiveSkill):
     send_data['active_skill_scope'] = send_data['active_skill_scope'].lower()
     if "active_skill_hate" not in send_data.keys():
         send_data['active_skill_hate'] = 0
+    if "active_skill_condition" not in send_data.keys():
+        send_data['active_skill_condition'] = list()
     collection_name = "user_active_skill"
 
     try:
