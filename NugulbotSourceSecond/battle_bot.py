@@ -84,7 +84,7 @@ class BattleBot(commands.Cog):
             
         return formula
 
-    async def calculate_skill(self, active_skill_data: dict, behavior_calculate: dict, target_calculate : dict):
+    async def calculate_skill(self, active_skill_data: dict, behavior_calculate: dict, target_calculate : dict, battle_status_list : list = []):
         # formula 내 공백 제거 및 변수 치환
         formula = active_skill_data.get("active_skill_formula", "0")
         if not formula.strip():
@@ -111,16 +111,43 @@ class BattleBot(commands.Cog):
             behavior_name = behavior_calculate.get("monster_name")
 
         target_name= ""
+        target_status_list = list()
+
         if "user_name" in target_calculate.keys():
             target_name = target_calculate.get("user_name")
+            target_status_list = [status for status in battle_status_list if status.get("status_target") == target_name]
         else:
             target_name = target_calculate.get("monster_name")
+            target_status_list = [status for status in battle_status_list if status.get("status_target") == target_name]
         
         skill_name = active_skill_data.get("active_skill_name")
         skill_type = active_skill_data.get("active_skill_type").lower()
 
         if skill_type == "attack":
-            description = "[{skill_name} (공격)][{behavior_name} → {target_name}] 최종 데미지 : {result}\n"
+            # target_status : defense 반영
+            for status in target_status_list:
+                if result <= 0:
+                    break
+
+                if status.get("status_type") == "defense":
+                    status_formula = status.get("status_formula")
+
+                    if status_formula <= 0:
+                        continue
+
+                    if result <= status_formula:
+                        status['status_formula'] -= result
+                        description += f"[방어] 데미지 : {result} → 0 (잔여 방어막 : {status['status_formula']})\n"
+                        result = 0
+                        break
+                    else:
+                        org_result = result
+                        result -= status['status_formula']
+                        status['status_formula'] = 0
+                        description += f"[방어] 데미지 : {org_result} → {result} (잔여 방어막 : {status['status_formula']})\n"
+                        status['del_flag'] = True
+
+            description += "[{skill_name} (공격)][{behavior_name} → {target_name}] 최종 데미지 : {result}\n"
             result_hp = max(target_calculate.get('hp') - result, 0)
             description += "{target_name} 잔여 체력 : " + str(result_hp)
             target_calculate['hp'] = result_hp
@@ -131,6 +158,12 @@ class BattleBot(commands.Cog):
             target_calculate['hp'] = result_hp
         elif skill_type == "defense":
             description = "[{skill_name} (방어)][{behavior_name} → {target_name}] 최종 방어막 : {result} (2턴)\n"
+
+        org_id_dict = {status["_id"]: status for status in battle_status_list}
+        new_id_dict = {status["_id"]: status for status in target_status_list}
+
+        org_id_dict.update(new_id_dict)
+        battle_status_list = list(org_id_dict.values())
 
         description = description.format(skill_name = skill_name, behavior_name = behavior_name, target_name = target_name, result = str(result))
         return result, description
@@ -168,6 +201,22 @@ class BattleBot(commands.Cog):
                         await interaction.followup.send(self.messages['BattleBot.common.not_start_battle'])
                         await session.abort_transaction()
                         return
+
+                    # 배틀 스테이터스를 끌고 온다
+                    battle_status_collection_name = "battle_status"
+                    battle_status_query = {
+                        "comu_id" : battle_data.get("comu_id"),
+                        "del_flag" : False,
+                        "battle_id" : ObjectId(str(battle_data.get("_id"))),
+                        "status_end_turn" :{
+                            "$gte" : battle_data.get("current_turn")
+                        }
+                    }
+
+
+                    battle_status_list = await self.db_manager.find_documents(session, battle_status_collection_name, battle_status_query)
+                    if not battle_status_list:
+                        battle_status_list = list()
 
                     # 스킬 정보가 있는지 확인
                     user_active_skill_collection_name = "user_active_skill"
@@ -257,7 +306,7 @@ class BattleBot(commands.Cog):
                         battle_update_type = "immediate"
                         if active_skill_type in ["defense"]:
                             battle_update_type = "status"
-                        formula_result, action_description = await self.calculate_skill(user_active_skill_data, user_calculate_data, target)
+                        formula_result, action_description = await self.calculate_skill(user_active_skill_data, user_calculate_data, target, battle_status_list)
 
                         now = datetime.datetime.now()
                         now = int(now.timestamp() * 1000)
@@ -318,6 +367,12 @@ class BattleBot(commands.Cog):
                                 await interaction.followup.send(self.messages['BattleBot.error.battle_status.create'])
                                 await session.abort_transaction()
                                 return
+
+                    # 스테이터스 업데이트
+                    for status in battle_status_list:
+                        status_id = str(status.pop("_id"))
+                        status['battle_id'] = ObjectId(str(status['battle_id']))
+                        update_battle_status_result = await self.db_manager.update_one_document(session,"battle_status", {"_id" : ObjectId(status_id)}, status)
 
                     # 헤이트 추가
                     user_calculate_update_id = await self.db_manager.update_one_document(session, user_calculate_collection_name, {"_id" : ObjectId(user_calculate_data.get("_id"))}, {"hate" : user_hate})

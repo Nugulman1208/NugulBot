@@ -1027,7 +1027,9 @@ async def go_next_turn(form_data: NextTurnProcess):
 
 
             target_user_id = log.get("action_target_user_id", None)
-            update = dict()
+            update_calculate_data = dict()
+            create_status_data = dict()
+            
             query = dict()
 
             if target_user_id:
@@ -1036,6 +1038,8 @@ async def go_next_turn(form_data: NextTurnProcess):
                 if not target:
                     raise HTTPException(status_code=404, detail=f"User({target_user_id}) not found")
                 target = target[0]
+
+                target_name = target.get("user_name")
 
                 query = {
                     "comu_id" : comu_id,
@@ -1051,6 +1055,8 @@ async def go_next_turn(form_data: NextTurnProcess):
 
                 target = target[0]
 
+                target_name = target.get("monster_name")
+
                 query = {
                     "comu_id" : comu_id,
                     "del_flag" : False,
@@ -1061,19 +1067,39 @@ async def go_next_turn(form_data: NextTurnProcess):
             if log.get("action_type") == "attack":
                 org_hp = target.get("hp")
                 update_hp = max(0, org_hp - log.get("action_result"))
-                update_data = {
+                update_calculate_data = {
                     "hp" : update_hp
                 }
 
             elif log.get("action_type") == "heal":
                 org_hp = target.get("hp")
                 update_hp = min(target.get("max_hp"), org_hp + log.get("action_result"))
-                update_data = {
+                update_calculate_data = {
                     "hp" : update_hp
                 }
 
-            if query and update_data:
-                update_result = await db_manager.update_one_document(session, target_collection, query, update_data)
+            elif log.get("action_type") == "defense":
+                create_status_data = {
+                    "server_id" : server_id,
+                    "channel_id" : battle_document.get("channel_id"),
+                    "comu_id" : comu_id,
+                    "battle_name" : battle_document.get("battle_name"),
+                    "battle_id" : ObjectId(str(battle_document.get("_id"))),
+                    "status_type" : log.get("action_type"),
+                    "status_target_collection_name" : target_collection,
+                    "status_formula" : log.get("action_result"),
+                    "status_target" : target_name,
+                    "status_end_turn" : battle_document.get("current_turn") + 2,
+                    "del_flag" : False
+                }
+
+            if query and update_calculate_data:
+                update_result = await db_manager.update_one_document(session, target_collection, query, update_calculate_data)
+            
+            if create_status_data:
+                create_status_result = await db_manager.create_one_document(session, "battle_status", create_status_data)
+                if not create_status_result:
+                    raise HTTPException(status_code=500, detail="Battle Status Create Failed")
 
         # status 바꾸고
         for status in battle_status_list:
