@@ -479,6 +479,9 @@ async def create_user_active_skill(form_data: ActiveSkill):
     send_data = form_data.dict()
     send_data['active_skill_type'] = send_data['active_skill_type'].lower()
     send_data['active_skill_scope'] = send_data['active_skill_scope'].lower()
+    if "active_skill_hate" not in send_data.keys():
+        send_data['active_skill_hate'] = 0
+
     comu_id = send_data['comu_id']
 
     collection_name = "user_active_skill"
@@ -544,6 +547,8 @@ async def update_user_active_skill(row_id: str, form_data: ActiveSkill):
     send_data = form_data.dict()
     send_data['active_skill_type'] = send_data['active_skill_type'].lower()
     send_data['active_skill_scope'] = send_data['active_skill_scope'].lower()
+    if "active_skill_hate" not in send_data.keys():
+        send_data['active_skill_hate'] = 0
     collection_name = "user_active_skill"
 
     try:

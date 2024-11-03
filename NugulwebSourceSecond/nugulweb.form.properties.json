@@ -231,8 +231,6 @@
                 },
                 "active_skill_hate": {
                     "label" : "헤이트 수치",
-                    "required_error_message": "헤이트 수치는 필수 입력 항목입니다.",
-                    "required" : true,
                     "input_type" : "number_input",
                     "min_value" : 0,
                     "help": "스킬을 사용할 때 늘어나는 헤이트 수치입니다. 최종 헤이트 수치는 해당 헤이트 수치 + 스킬 결과값 으로 계산됩니다."
@@ -323,7 +321,7 @@
                     "required" : true,
                     "input_type" : "selectbox",
                     "item_type_options" : [
-                        "attack", "heal", "defense", "bs_clear", "increase_hate", "decrease_hate"
+                        "attack", "heal", "defense"
                     ],
                     "help": "스킬 종류입니다. ATTACK : 공격 / HEAL : 회복 / DEFENSE : 방어 / BS_CLEAR : 디버프 해제 / GET_HATE : 헤이트 수치 증가 / DECREASE_HATE : 헤이트 수치 감소"
                 },

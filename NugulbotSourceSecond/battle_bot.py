@@ -158,6 +158,18 @@ class BattleBot(commands.Cog):
             target_calculate['hp'] = result_hp
         elif skill_type == "defense":
             description = "[{skill_name} (방어)][{behavior_name} → {target_name}] 최종 방어막 : {result} (2턴)\n"
+        elif skill_type == "increase_hate":
+            org_hate = target_calculate['hate']
+            new_hate = org_hate + result
+            description = "[{skill_name} (헤이트 증가)][{behavior_name} → {target_name}] 헤이트 {result} 증가\n"
+            description += "{target_name} 헤이트 변화 : " + f"{org_hate} → {new_hate}"
+            target_calculate['hate'] = new_hate
+        elif skill_type == "decrease_hate":
+            org_hate = target_calculate['hate']
+            new_hate = max(org_hate - result, 0)
+            description = "[{skill_name} (헤이트 감소)][{behavior_name} → {target_name}] 헤이트 {result} 감소\n"
+            description += "{target_name} 헤이트 변화 : " + f"{org_hate} → {new_hate}"
+            target_calculate['hate'] = new_hate
 
         org_id_dict = {status["_id"]: status for status in battle_status_list}
         new_id_dict = {status["_id"]: status for status in target_status_list}
@@ -283,6 +295,10 @@ class BattleBot(commands.Cog):
                                 if target.get(target_name_column) == selected:
                                     target_result_name_list.append(target.get(target_name_column))
                                     target_result_list.append(target)
+                    # (3) 자신
+                    elif "me" in user_active_skill_data.get("active_skill_scope").lower():
+                        target_result_list.append(user_calculate_data)
+                        target_result_name_list.append(user_calculate_data.get("user_name"))
 
                     # 만일 최종 타깃 설정 리스트가 없다면 에러
                     if len(target_result_name_list) < 1:
@@ -311,7 +327,17 @@ class BattleBot(commands.Cog):
                         now = datetime.datetime.now()
                         now = int(now.timestamp() * 1000)
 
-                        user_hate += formula_result // 10
+                        
+                        if str(user_calculate_data.get("_id")) == str(target.get("_id")):
+                            if "increase_hate" == active_skill_type:
+                                user_hate += formula_result
+                            elif "decrease_hate" == active_skill_type:
+                                user_hate = max(0, user_hate - formula_result)
+                            else:
+                                user_hate += formula_result // 10
+                        else:
+                            if active_skill_type not in ["increase_hate", "decrease_hate"]:
+                                user_hate += formula_result // 10                            
 
                         battle_log = {
                             "server_id" : server_id,
