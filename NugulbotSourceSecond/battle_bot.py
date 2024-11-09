@@ -104,7 +104,8 @@ class BattleBot(commands.Cog):
         result = int(eval(formula))
 
         # 디스코드로 보낼 description 작성
-        description = ""
+        description = f"기본 데미지 : {result}\n"
+
         behavior_name = ""
         if "user_name" in behavior_calculate.keys():
             behavior_name = behavior_calculate.get("user_name")
@@ -116,10 +117,25 @@ class BattleBot(commands.Cog):
 
         if "user_name" in target_calculate.keys():
             target_name = target_calculate.get("user_name")
-            target_status_list = [status for status in battle_status_list if status.get("status_target") == target_name]
+            target_status_list = [status for status in battle_status_list if status.get("status_target") == target_name or status.get("status_target") == behavior_name]
         else:
             target_name = target_calculate.get("monster_name")
-            target_status_list = [status for status in battle_status_list if status.get("status_target") == target_name]
+            target_status_list = [status for status in battle_status_list if status.get("status_target") == target_name or status.get("status_target") == behavior_name]
+
+        # 버프 수치 추가
+        for status in target_status_list:
+            if status.get("status_type") != "buff":
+                continue
+
+            if status.get("status_target") != behavior_name:
+                continue
+            
+            status_formula = status.get("status_formula").lower()
+            status_formula.replace("result", str(result))
+            result = int(eval(status_formula))
+
+            description += f"버프 수치 추가 데미지 : {result}\n"
+            status['del_flag'] = True
         
         skill_name = active_skill_data.get("active_skill_name")
         skill_type = active_skill_data.get("active_skill_type").lower()
@@ -131,6 +147,9 @@ class BattleBot(commands.Cog):
                     break
 
                 if status.get("status_type") == "defense":
+                    if status.get("status_target") != target_name:
+                        continue
+
                     status_formula = status.get("status_formula")
 
                     if status_formula <= 0:

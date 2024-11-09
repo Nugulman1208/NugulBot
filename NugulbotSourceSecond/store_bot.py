@@ -6,6 +6,8 @@ from discord import app_commands
 from mongodb_manager import MongoDBManager
 from random import randint
 import random
+import datetime
+from bson import ObjectId
 
 
 class StoreBot(commands.Cog):
@@ -418,3 +420,198 @@ class StoreBot(commands.Cog):
                     app_commands.Choice(name=user_name, value=user_name)
                     for user_name in user_names[:25]  # 최대 25개까지 자동완성 제안
                 ]
+
+    @app_commands.command(name="아이템사용")
+    @app_commands.describe(item_name="사용할 아이템 이름", target="사용할 아이템의 대상")
+    async def use_item(self, interaction: discord.Interaction, item_name: str, target: str):
+        await interaction.response.defer()  # 응답을 지연시킴
+        try:
+            server_id = str(interaction.guild.id)  # 서버 ID를 가져옴
+            user_id = str(interaction.user)
+            channel_id = str(interaction.channel.id)
+
+            if not target or not item_name:
+                await interaction.followup.send(self.messages['BattleBot.use_item.not_found_args'])
+                return
+
+            async with await self.db_manager.client.start_session() as session:
+                async with session.start_transaction():
+                    calculate_collection_name = "user_calculate"
+                    calculate_query = {"user_id": user_id, "server_id": server_id, "del_flag" : False}
+                    calculate_data = await self.db_manager.find_one_document(session, calculate_collection_name, calculate_query)
+                    if calculate_data is None:
+                        await interaction.followup.send(self.messages['common.not_registered_user'])
+                        return
+
+                    inventory_collection_name = "inventory"
+                    inventory_query = {"user_id": user_id, "server_id": server_id, "can_use": True, "item_name": item_name}
+                    inventory_validation_data = await self.db_manager.find_one_document(session, inventory_collection_name, inventory_query)
+
+                    if inventory_validation_data is None:
+                        await interaction.followup.send(self.messages['BattleBot.common.not_found_inventory'])
+                        return
+
+                    battle_info = await self.db_manager.find_one_document(session, "battle", {"server_id": server_id, "del_flag": False})
+
+                    target_collection_name = calculate_collection_name
+                    action_target_type = "party"
+
+                    target_query = {"server_id": server_id, "user_name": target}
+                    target_name_collumn = "user_name"
+                    target_validation = await self.db_manager.find_one_document(session, target_collection_name, target_query)
+
+                    if battle_info is not None:
+
+                        
+                        if target_validation is None:
+                            target_collection_name = "monster_calculate"
+                            action_target_type = "enemy"
+                            target_name_collumn = "monster_name"
+                            target_query = {"server_id" : server_id, "del_flag" : False, "battle_name" : battle_info.get("battle_name"), "monster_name" : target}
+
+                            target_validation = await self.db_manager.find_one_document(session, target_collection_name, target_query)
+
+                        if target_validation is None:
+                            await interaction.followup.send(self.messages['BattleBot.use_item.invalid_target'])
+                            return
+
+                        now = datetime.datetime.now()
+                        now = int(now.timestamp() * 1000)
+
+                        description = f"[아이템 사용][{item_name}][{calculate_data.get('user_name')} → {target}]"
+
+                        log_data = {
+                            "server_id": server_id,
+                            "channel_id" : channel_id,
+                            "comu_id" : battle_info.get("comu_id"),
+                            "battle_name": battle_info['battle_name'],
+                            "current_turn": battle_info['current_turn'],
+                            "action_behavior_name": inventory_validation_data['user_name'],
+                            "action_behavior_user_id" : inventory_validation_data['user_id'],
+                            "action_behavior_type" : "user",
+                            "action_target_type" : action_target_type,
+                            "action_target_name" : target,
+                            "action_type" : f"use_item ({inventory_validation_data.get("item_type")})",
+                            "action_result" : inventory_validation_data.get("item_formula", 0),
+                            "action_description" :description
+                        }
+
+                        log_result = await self.db_manager.create_one_document(session, "battle_log", log_data)
+                        if log_result is None:
+                            await interaction.followup.send(self.messages['BattleBot.error.battle_log.create'])
+                            await session.abort_transaction()
+                            return
+                    else:
+                        if target_validation is None:
+                            await interaction.followup.send(self.messages['BattleBot.use_item.invalid_target'])
+                            return
+
+                    item_update_query = {'_id': inventory_validation_data['_id']}
+                    item_update_data = {'can_use': False}
+                    item_update_result = await self.db_manager.update_one_document(session, inventory_collection_name, item_update_query, item_update_data)
+
+                    # 회복 코드 넣기
+                    if inventory_validation_data['item_type'] == "heal":
+                        final_hp = min(int(inventory_validation_data['item_formula']) + target_validation['hp'], target_validation['max_hp'])
+                        target_update = await self.db_manager.update_one_document(session, target_collection_name, target_query, {'hp': final_hp})
+
+                    # 버프 코드 넣기
+                    if inventory_validation_data['item_type'] == "buff" and battle_info:
+                        status_collection_name = "battle_status"
+                        battle_status_data = {
+                            "server_id" : server_id,
+                            "channel_id" : channel_id,
+                            "comu_id" : battle_info.get("comu_id"),
+                            "battle_name" : battle_info.get("battle_name"),
+                            "battle_id" : ObjectId(str(battle_info.get("_id"))),
+                            "status_type" : inventory_validation_data['item_type'],
+                            "status_target_collection_name" : target_collection_name,
+                            "status_formula" : inventory_validation_data.get("item_formula"),
+                            "status_target" : target,
+                            "status_end_turn" : battle_info.get("current_turn"),
+                            "del_flag" : False
+                        }
+
+                        battle_status_result = await self.db_manager.create_one_document(session, status_collection_name, battle_status_data)
+                        if not battle_status_result:
+                            await interaction.followup.send(self.messages['BattleBot.error.battle_status.create'])
+                            await session.abort_transaction()
+                            return
+
+
+                    slip_collection_name = "slip"
+                    slip_data = {
+                        "server_id": server_id,
+                        "user_id": user_id,
+                        "user_name": calculate_data['user_name'],
+                        "description": f"[아이템사용][{item_name}] {calculate_data.get('user_name')} → {target_validation.get(target_name_collumn)}"
+                    }
+
+                    slip_result = await self.db_manager.create_one_document(session, slip_collection_name, slip_data)
+                    if slip_result is None:
+                        await interaction.followup.send(self.messages['StoreBot.accrue.error.slip.cannot_create'])
+                        return
+
+                    await session.commit_transaction()
+                    await interaction.followup.send(self.messages['StoreBot.use_item.success'].format(item_name = item_name, target_name = target_validation.get(target_name_collumn)))
+        except Exception as e:
+            print(e)
+            await session.abort_transaction()
+            await interaction.followup.send(self.messages['common.catch.error'].format(error = e))
+
+
+    @use_item.autocomplete('item_name')
+    async def item_name_autocomplete(self, interaction: discord.Interaction, current: str):
+        try:
+            server_id = str(interaction.guild.id)  # 서버 ID를 가져옴
+            user_id = str(interaction.user)
+
+            async with await self.db_manager.client.start_session() as session:
+                async with session.start_transaction():
+                    inventory_collection_name = "inventory"
+                    inventory_query = {
+                        "user_id": user_id,
+                        "server_id": server_id,  # server_id로 변경
+                        "can_use": True,
+                        "del_flag" : False,
+                        "item_name": {'$regex': current, "$options": "i"}
+                    }
+                    inventory_data = await self.db_manager.find_documents(session, inventory_collection_name, inventory_query)
+
+                    item_names = list(set(item["item_name"] for item in inventory_data))
+                    return [app_commands.Choice(name=item_name, value=item_name) for item_name in item_names]
+        except Exception as e:
+            print(e)
+            return []
+
+
+    @use_item.autocomplete('target')
+    async def item_target_autocomplete(self, interaction: discord.Interaction, current: str):
+        try:
+            server_id = str(interaction.guild.id)  # 서버 ID를 가져옴
+            user_id = str(interaction.user)
+
+            async with await self.db_manager.client.start_session() as session:
+                async with session.start_transaction():
+                    user_calculate_collection_name = "user_calculate"
+                    user_calculate_query = {
+                        "server_id": server_id,  # server_id로 변경
+                        "user_id": {"$ne": None},
+                        "user_name": {'$regex': current, "$options": "i"}
+                    }
+
+                    target_list = await self.db_manager.find_documents(session, user_calculate_collection_name, user_calculate_query)
+                    target_name_list = list(user["user_name"] for user in target_list)
+
+                    battle_info = await self.db_manager.find_one_document(session, "battle", {"server_id": server_id, "del_flag": False})
+
+                    if battle_info:
+                        monster_list = battle_info.get("monster_list", [])
+                        for monster_name in monster_list:
+                            target_name_list.append(monster_name)
+                    
+                    return [app_commands.Choice(name=target_name, value=target_name) for target_name in target_name_list]
+
+        except Exception as e:
+            print(e)
+            return []

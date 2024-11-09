@@ -166,7 +166,7 @@
                     "required" : true,
                     "input_type" : "selectbox",
                     "item_type_options" : [
-                        "ROLEPLAY", "HEAL", "BS_CLEAR", "BUFF", "RANDOM"
+                        "roleplay", "heal", "bs_clear", "buff", "random"
                     ],
                     "help": "아이템의 종류입니다. 배틀용 : HEAL 힐, BUFF 버프, BS_CLEAR 상태이상 회복 / 배틀 미사용 : RANDOM 랜덤 박스, ROLEPLAY  롤플레이용"
                 },
@@ -174,7 +174,7 @@
                     "label" : "아이템 공식",
                     "required" : false,
                     "input_type" : "text_input",
-                    "help": "배틀 사용시 아이템 공식입니다. HEAL 시 회복되는 수치 (숫자로 표기 ex. 30) / BUFF 해당 턴 강화 효괴 (예시 : 1.2 배일 경우 *1.2 로 기입, 30 데미지 업은 + 30 으로 기입)"
+                    "help": "배틀 사용시 아이템 공식입니다. HEAL 시 회복되는 수치 (숫자로 표기 ex. 30) / BUFF 해당 턴 강화 효괴 (예시 : 1.2 배일 경우 result*1.2 로 기입, 30 데미지 업은 result+ 30 으로 기입)"
                 }
             }
         }
