@@ -217,7 +217,7 @@
                     "label" : "스킬 공식",
                     "required" : false,
                     "input_type" : "text_input",
-                    "help": "스킬의 공식입니다. ATTACK * 2 혹은 HEAL * 1.2, DEFENSE + 30 와 같이 수식으로 적는 것, 30 과 같이 확정적인 수치를 넣는 것도 가능합니다."
+                    "help": "스킬의 공식입니다. ATTACK * 2 혹은 HEAL * 1.2, DEFENSE + 30 와 같이 수식으로 적는 것, 30 과 같이 확정적인 수치를 넣는 것도 가능합니다. DICE(3,4) 는 3d4 입니다."
                 },
                 "active_skill_scope": {
                    "label" : "스킬 범위",
@@ -236,6 +236,25 @@
                         "defense", "heal", "attack"
                     ],
                     "help": "아군 대상일 경우 수혜를 받는 대상 (all_party 이면서 defense 이면 탱커만 대상) / 여러개 선택 가능"
+                },
+                "active_dot_name" : {
+                    "label" : "도트 이름",
+                    "required" : false,
+                    "input_type" : "text_input",
+                    "help": "도트명으로 사용될 이름입니다. (독, 전기, 저주 등등) / 도트는 힐과 딜에서만 적용됩니다."
+                },
+                "active_dot_formula" : {
+                    "label" : "도트 공식",
+                    "required" : false,
+                    "input_type" : "text_input",
+                    "help": "도트 딜/힐의 공식입니다. 기입 방식은 스킬 공식 기입 방식과 동일합니다."
+                },
+                "active_dot_turn" : {
+                    "label" : "도트 지속 턴",
+                    "required" : false,
+                    "input_type" : "number_input",
+                    "min_value" : 0,
+                    "help" : "도트 지속 턴입니다. (3으로 적으면 3턴 간 도트 딜/도트힐이 들어갑니다.)"
                 },
                 "active_skill_hate": {
                     "label" : "헤이트 수치",

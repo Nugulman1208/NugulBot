@@ -453,6 +453,11 @@ class ActiveSkill(BaseModel):
     active_skill_condition : Optional[list] = None
     active_skill_hate : Optional[int] = None
     active_skill_turn : Optional[int] = None
+    
+    active_dot_name : Optional[str] = None
+    active_dot_formula : Optional[str] = None
+    active_dot_turn : Optional[int] = None
+
     comu_id : str
     server_id : str
 
@@ -488,6 +493,17 @@ async def create_user_active_skill(form_data: ActiveSkill):
     comu_id = send_data['comu_id']
 
     collection_name = "user_active_skill"
+
+    if send_data['active_skill_type'] == "heal" and 'active_dot_formula' in send_data.keys():
+        if not send_data.get("active_dot_name", None):
+            send_data['active_dot_name'] = "도트힐"
+    elif send_data['active_skill_type'] == "attack" and 'active_dot_formula' in send_data.keys():
+        if not send_data.get("active_dot_name", None):
+            send_data['active_dot_name'] = "도트딜"
+    else:
+        send_data['active_dot_name'] = ''
+        send_data['active_dot_formula'] = ''
+        send_data['active_dot_turn'] = 0
 
     try:
         session.start_transaction()
@@ -555,6 +571,17 @@ async def update_user_active_skill(row_id: str, form_data: ActiveSkill):
     if "active_skill_condition" not in send_data.keys():
         send_data['active_skill_condition'] = list()
     collection_name = "user_active_skill"
+
+    if send_data['active_skill_type'] == "heal" and 'active_dot_formula' in send_data.keys():
+        if not send_data.get("active_dot_name", None):
+            send_data['active_dot_name'] = "도트힐"
+    elif send_data['active_skill_type'] == "attack" and 'active_dot_formula' in send_data.keys():
+        if not send_data.get("active_dot_name", None):
+            send_data['active_dot_name'] = "도트딜"
+    else:
+        send_data['active_dot_name'] = ''
+        send_data['active_dot_formula'] = ''
+        send_data['active_dot_turn'] = 0
 
     try:
         session.start_transaction()
@@ -1111,16 +1138,135 @@ async def go_next_turn(form_data: NextTurnProcess):
                 if not create_status_result:
                     raise HTTPException(status_code=500, detail="Battle Status Create Failed")
 
-        # status 바꾸고
+        # 모든 status 를 찾고
+        status_query = {
+            "comu_id" : comu_id,
+            "battle_id" : ObjectId(str(battle_document.get("_id"))),
+            "del_flag" : False,
+            "status_end_turn" : {
+                "$gte"  : battle_document.get("current_turn", 1)
+            }
+        }
+
+        status_document = await db_manager.find_documents(session, "battle_status", status_query)
+
+        print("debug1")
+        print(status_document)
+        
+        # defense status 바꾸고
         for status in battle_status_list:
+            print("debug2")
+            print(status)
+
             status_id = str(status.pop("_id"))
+            
+
+
+            if not any(str(d.get("_id")) == status_id for d in status_document):
+                raise HTTPException(status_code=500, detail="Battle Status Not Found")
+
             status['battle_id'] = ObjectId(str(status['battle_id']))
             update_battle_status_result = await db_manager.update_one_document(session,"battle_status", {"_id" : ObjectId(status_id)}, status)
+
+        # 도트딜 / 도트힐 반영
+        status_document = await db_manager.find_documents(session, "battle_status", status_query)
+
+        total_dot_description = "========================\n"
+
+        for status in status_document:
+            status_type = status.get('status_type')
+            if "dot" not in status_type:
+                continue
+
+            print("debug3")
+            print("status : ", status)
+
+            # - 도트딜 / 도트힐 로그 생성
+            now = datetime.now()
+            now = int(now.timestamp() * 1000)
+
+            status_dot_log = {
+                "server_id" : status.get("server_id"),
+                "channel_id" : status.get("channel_id"),
+                "comu_id" : status.get("comu_id"),
+                "battle_name" : status.get("battle_name"),
+                "battle_id" : ObjectId(str(status.get("battle_id"))),
+                "current_turn" :  battle_document.get("current_turn"),
+                "action_time" : now,
+                "action_behavior_name" : status.get("status_behavior_name"),
+                "action_bahavior_user_id" : status.get("status_bahavior_user_id"),
+                "action_behavior_type" : "user",
+                "action_target_name" : status.get("status_target")
+            }
+
+            dot_result_list = status.get("status_formula")
+            dot_index = status.get("status_end_turn") - battle_document.get("current_turn")
+            dot_result = dot_result_list[dot_index]
+            status_dot_log["action_result"] = dot_result
+
+            status_target_collection_name = status.get("status_target_collection_name")
+            status_target_name = status.get("status_target")
+            
+            if "monster" in status_target_collection_name:
+                status_target_query = {
+                    "battle_name" : status.get("battle_name"),
+                    "del_flag" : False,
+                    "monster_name" : status_target_name,
+                    "hp" :{
+                        "$gt" :0
+                    }
+                }
+            else:
+                status_target_query = {
+                    "del_flag" : False,
+                    "user_name" : status_target_name,
+                    "comu_id" : comu_id,
+                    "hp" :{
+                        "$gt" :0
+                    }
+                }
+
+            print("target query", status_target_query)
+            
+
+            dot_target = await db_manager.find_one_document(session, status_target_collection_name, status_target_query)
+            print("dot_target", dot_target)
+            if not dot_target:
+                continue
+
+            if status_type == "dot_heal":
+                status_dot_log['action_target_type'] = "party"
+                status_dot_log['action_type'] = "heal"
+                status_dot_log["action_description"] = f"[{status.get('status_name', '도트힐')}][{status.get('status_behavior_name')} → {status.get('status_target')}] 최종 회복 : {dot_result}"
+                total_dot_description += status_dot_log["action_description"]
+                total_dot_description += "\n"
+
+                # - 도트딜 / 도트힐 calculation 반영
+                final_dot_hp = min(dot_target.get("max_hp"), dot_target.get("hp") + dot_result)
+                print("final_dot_hp : ", final_dot_hp)
+                dot_result = await db_manager.update_one_document(session, status_target_collection_name, status_target_query, {"hp" : final_dot_hp})
+
+            else:
+                status_dot_log['action_target_type'] = "enemy"
+                status_dot_log['action_type'] = "attack"
+                status_dot_log["action_description"] = f"[{status.get('status_name', '도트딜')}][{status.get('status_behavior_name')} → {status.get('status_target')}] 데미지 : {dot_result}"
+                total_dot_description += status_dot_log["action_description"]
+                total_dot_description += "\n"
+
+                # - 도트딜 / 도트힐 calculation 반영
+                final_dot_hp = max(0, dot_target.get("hp") - dot_result)
+                print("final_dot_hp : ", final_dot_hp)
+                dot_result = await db_manager.update_one_document(session, status_target_collection_name, status_target_query, {"hp" : final_dot_hp})
+
+            dot_result = await db_manager.create_one_document(session, "battle_log", status_dot_log)
 
         # 턴 바꾸고
         battle_turn_update_result = await db_manager.update_inc_documents(session, "battle", {"comu_id": comu_id, "del_flag" : False, "_id" : ObjectId(battle_id)}, {"current_turn" : 1})
         if not battle_turn_update_result:
             raise HTTPException(status_code=500, detail="Battle Turn Increase Failed")
+
+        # 바뀐 턴을 반영하여 status_document 재정리
+        status_document = [status for status in status_document if status.get("status_end_turn") > battle_document.get("current_turn", 1)]
 
         # 유저 정보 전송 메세지 생성 
         user_master_document = await db_manager.find_documents(session, "user_calculate", {"comu_id": comu_id, "del_flag" : False})
@@ -1150,19 +1296,6 @@ async def go_next_turn(form_data: NextTurnProcess):
         user_description += "\n"
 
         # status description 추가
-        status_query = {
-            "comu_id" : comu_id,
-            "battle_id" : ObjectId(str(battle_document.get("_id"))),
-            "del_flag" : False,
-            "status_end_turn" : {
-                "$gte"  : battle_document.get("current_turn", 1) + 1
-            }
-        }
-
-        print(status_query)
-        status_document = await db_manager.find_documents(session, "battle_status", status_query)
-        print(status_document)
-
         status_description = None
         if status_document:
             status_description = "========================\n"
@@ -1171,7 +1304,9 @@ async def go_next_turn(form_data: NextTurnProcess):
                 status_target = status.get("status_target")
                 status_end_turn = status.get("status_end_turn")
                 remain_turn = status_end_turn - battle_document.get("current_turn", 1)
-                status_description += f"[{status_type}][{status_target}] {status.get("status_formula")} 방어벽 ({remain_turn} 턴)\n"
+
+                if status_type == "defense":
+                    status_description += f"[{status_type}][{status_target}] {status.get("status_formula")} 방어벽 ({remain_turn} 턴)\n"
 
 
 
@@ -1197,7 +1332,7 @@ async def go_next_turn(form_data: NextTurnProcess):
     finally:
         await session.end_session()  # 세션 종료
 
-    return {"message": "Go next turn successfully", "status" : "success", "monster_description" :monster_description, "user_description" : user_description, "status_description" : status_description}
+    return {"message": "Go next turn successfully", "status" : "success", "monster_description" :monster_description, "user_description" : user_description, "status_description" : status_description, "dot_description" : total_dot_description}
 
 
 

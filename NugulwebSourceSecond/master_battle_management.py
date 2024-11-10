@@ -114,6 +114,9 @@ class MasterBattleManagement:
                 final_message = ""
                 for log in result_log:
                     final_message += log.get("action_description")
+
+                if api_result.get("dot_description", None):
+                    final_message += api_result.get("dot_description", None)
                 
                 if api_result.get("user_description", None):
                     final_message += api_result.get("user_description", None)

@@ -158,7 +158,7 @@ class FormRenderer:
                     max_value = None
 
             try:
-                value = float(value) if '.' in str(value) else int(value)
+                value = int(value) if '.' in str(value) else int(value)
             except ValueError:
                 value = min_value
 

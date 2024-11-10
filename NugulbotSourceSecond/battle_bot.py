@@ -84,6 +84,21 @@ class BattleBot(commands.Cog):
             
         return formula
 
+    async def simple_formula_calculator(self, formula : str, stat: dict):
+        formula = await self.replace_formula(formula, stat)
+        pattern = r"dice\(([^,]+),([^,]+)\)"
+        matches = re.findall(pattern, formula)
+
+        for dice_count, dice_face in matches:
+            # 치환된 formula 내에서 dice() 호출
+            dice_result = await self.dice(int(eval(dice_count)), int(eval(dice_face)))
+            formula = formula.replace(f"dice({dice_count},{dice_face})", str(dice_result), 1)
+
+        # 최종 수식을 평가하여 숫자로 반환
+        result = int(eval(formula))
+
+        return result
+
     async def calculate_skill(self, active_skill_data: dict, behavior_calculate: dict, target_calculate : dict, battle_status_list : list = []):
         # formula 내 공백 제거 및 변수 치환
         formula = active_skill_data.get("active_skill_formula", "0")
@@ -347,6 +362,8 @@ class BattleBot(commands.Cog):
                         battle_update_type = "immediate"
                         if active_skill_type in ["defense"]:
                             battle_update_type = "status"
+                        elif active_skill_type in ['heal', "attack"] and user_active_skill_data.get("active_dot_formula", None):
+                            battle_update_type = "status_immediate"
                         formula_result, action_description = await self.calculate_skill(user_active_skill_data, user_calculate_data, target, battle_status_list)
 
                         now = datetime.datetime.now()
@@ -391,24 +408,46 @@ class BattleBot(commands.Cog):
                             return
 
                         # target 업데이트 (즉발이면 calculate 에 직접 넣어지고 아니면 battle_status 에 보관 된다.)
-                        if battle_update_type == "immediate":
+                        if "immediate" in battle_update_type:
                             target_update_id = await self.db_manager.update_one_document(session, target_collection_name, {"_id" : ObjectId(target.get("_id"))}, target)
                             if not target_update_id:
                                 await interaction.followup.send(self.messages['BattleBot.error.target_calculate.update'])
                                 await session.abort_transaction()
                                 return
-                        elif battle_update_type == "status":
+                        if "status" in battle_update_type:
+                            if active_skill_type == "defense":
+                                status_formula = formula_result
+                                status_type = active_skill_type
+                                status_end_turn = battle_data.get("current_turn") + 1
+                                status_name = "방어"
+                            else:
+                                status_formula = user_active_skill_data.get("active_dot_formula", None)
+                                status_type = "dot_" + active_skill_type
+                                status_end_turn = battle_data.get("current_turn") + user_active_skill_data.get("active_dot_turn") - 1
+
+                                dot_result_list = list()
+
+                                for _ in range(0, user_active_skill_data.get("active_dot_turn")):
+                                    dot_result = await self.simple_formula_calculator(status_formula, user_calculate_data)
+                                    dot_result_list.append(dot_result)
+
+                                status_formula = dot_result_list
+                                status_name = user_active_skill_data.get("active_dot_name")
+
                             battle_status_data = {
                                 "server_id" : server_id,
                                 "channel_id" : channel_id,
                                 "comu_id" : user_calculate_data.get("comu_id"),
                                 "battle_name" : battle_data.get("battle_name"),
                                 "battle_id" : ObjectId(str(battle_data.get("_id"))),
-                                "status_type" : active_skill_type,
+                                "status_type" : status_type,
                                 "status_target_collection_name" : target_collection_name,
-                                "status_formula" : formula_result,
+                                "status_formula" : status_formula,
                                 "status_target" : target.get(target_name_column),
-                                "status_end_turn" : battle_data.get("current_turn") + 1,
+                                "status_end_turn" : status_end_turn,
+                                "status_behavior_name" : user_calculate_data.get("user_name"),
+                                "status_bahavior_user_id" : user_calculate_data.get("user_id"),
+                                "status_name" : status_name,
                                 "del_flag" : False
                             }
 
