@@ -30,13 +30,15 @@
   "BattleBot.common.not_start_battle" : "배틀을 아직 시작하지 않았습니다. 관리자에게 문의 바랍니다.",
   "BattleBot.common.not_found_active_skill" : "해당 액티브 스킬을 찾을 수 없습니다.",
   "BattleBot.common.not_found_target" : "타겟을 찾을 수 없습니다. 관리자에게 문의 바랍니다.",
-  "BattleBot.common.not_found_party" : "해당 유저는 존재하지 않는 유저입니다.",
-  "BattleBot.common.not_found_enemy" : "해당 몬스터는 존재하지 않은 몬스터입니다.",
+  "BattleBot.common.not_found_party" : "HP 가 0 이상인 유저 중 해당 유저는 존재하지 않는 유저입니다.",
+  "BattleBot.common.not_found_enemy" : "HP 가 0 이상인 몬스터 중 해당 몬스터는 존재하지 않은 몬스터입니다.",
   "BattleBot.error.battle_log.create" : "배틀 로그 작성에 실패했습니다. 관리자에게 문의 바랍니다.",
   "BattleBot.error.target_calculate.update" : "타깃의 Calculate 테이블 갱신에 실패했습니다. 관리자에게 문의 바랍니다.",
   "BattleBot.error.user_calculate.update" : "User Calculate 테이블 갱신에 실패했습니다. 관리자에게 문의 바랍니다.",
   "BattleBot.error.battle_status.create" : "Battle Status 테이블 추가에 실패했습니다. 관리자에게 문의 바랍니다.",
   "BattleBot.use_item.not_found_args" : "아이템 이름 혹은 아이템 사용 대상이 누락되었습니다.",
   "BattleBot.use_item.invalid_target" : "올바르지 않은 대상입니다. 대상이 등록된 대상인지 확인 부탁드립니다.",
+  "BattleBot.skill.already_skill_use" : "이미 스킬을 사용했습니다. 패널티로 HP 가 0이 됩니다.",
+  "BattleBot.skill.zero_hp" : "HP 가 0 이 되어 스킬을 사용할 수 없습니다.",
   "StoreBot.use_item.success" : "{target_name} 에게 {item_name} 아이템 사용에 성공하셨습니다."
 }

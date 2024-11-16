@@ -203,9 +203,28 @@ class MasterBattleManagement:
 
         api = APIClient(self.api_url)
         monster_active_list = api.make_request("monster/skill/active", data={"comu_id": comu_id})
-
+                
         if monster_active_list and "monster_active_skill_list" in monster_active_list.keys():
             monster_active_list = monster_active_list.get("monster_active_skill_list")
+
+            # HP 가 0 이상인 Monster 만 행동하도록 설정
+            total_monster_list = api.make_request("calculate", data={"comu_id": comu_id, "collection_type" : "monster"})
+            total_monster_list = total_monster_list.get("calculate_list")
+            can_move_monster_list = list()
+            for monster in total_monster_list:
+                if monster.get("monster_name") not in battle_data.get("monster_list", []):
+                    continue
+
+                elif monster.get("hp", 0) > 0:
+                    can_move_monster_list.append(monster.get("monster_name"))
+
+            temp_active_list = list()
+
+            for active_skill in monster_active_list:
+                if active_skill.get("monster_name") in can_move_monster_list:
+                    temp_active_list.append(active_skill)
+
+            monster_active_list = temp_active_list
 
             select_options = list()
             select_options_dict = dict()

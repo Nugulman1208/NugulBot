@@ -37,7 +37,7 @@ def main():
         monster_active_skill_option = "몬스터 액티브 스킬"
         battle_option = "전투보기"
 
-        options = ["사용자", "보상", "아이템", "패시브", user_active_skill_option, monster_option, monster_active_skill_option, battle_option]
+        options = ["사용자", "보상", "아이템", user_active_skill_option, monster_option, monster_active_skill_option, battle_option]
 
         select = st.sidebar.radio("메뉴", options)
 

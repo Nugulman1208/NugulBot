@@ -491,7 +491,7 @@ class StoreBot(commands.Cog):
                             "action_behavior_type" : "user",
                             "action_target_type" : action_target_type,
                             "action_target_name" : target,
-                            "action_type" : f"use_item ({inventory_validation_data.get("item_type")})",
+                            "action_type" : "use_item",
                             "action_result" : inventory_validation_data.get("item_formula", 0),
                             "action_description" :description
                         }

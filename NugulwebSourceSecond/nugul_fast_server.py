@@ -984,10 +984,10 @@ async def get_calculation(comu_id : str, collection_type : str):
 
     send_list = list()
     if collection_type == "user":
-        send_list = await db_manager.find_documents(session, "user_calculate", {"comu_id": comu_id, "del_flag" : False})
+        send_list = await db_manager.find_documents(session, "user_calculate", {"comu_id": comu_id, "del_flag" : False, "hp" : {"$gt" : 0}})
         send_list = [send_data for send_data in send_list if send_data.get("user_id")]
     elif collection_type == "monster":
-        send_list = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False})
+        send_list = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False, "hp" : {"$gt" : 0}})
     else:
         raise HTTPException(status_code=400, detail="Invalid Collection Type")
 
