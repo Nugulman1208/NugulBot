@@ -62,3 +62,4 @@ tzdata==2024.2
 urllib3==2.2.3
 uvicorn==0.30.6
 watchdog==4.0.2
+websockets==13.1
