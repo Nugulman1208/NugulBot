@@ -368,6 +368,12 @@
                     ],
                     "help": "스킬 범위 입니다. ALL_ENEMY : 적 전체 / ONE_ENEMY : 단일 적 / ALL_PARTY : 아군 전체 / ONE_PARTY : 단일 아군 / ME : 자기 자신"
                 },
+                "active_skill_scope_number": {
+                   "label" : "스킬 범위 (인원수)",
+                    "required" : false,
+                    "input_type" : "number_input",
+                    "help": "all_party 혹은 all_enemy 일 때 스킬 범위 입니다. (명수 기준) / 0 명 -> 전체 공격"
+                },
                 "active_skill_description": {
                     "label" : "스킬 설명",
                     "required_error_message": "스킬 설명은 필수 입력 항목입니다.",

@@ -453,6 +453,7 @@ class ActiveSkill(BaseModel):
     active_skill_condition : Optional[list] = None
     active_skill_hate : Optional[int] = None
     active_skill_turn : Optional[int] = None
+    active_skill_scope_number : Optional[int] = 0
     
     active_dot_name : Optional[str] = None
     active_dot_formula : Optional[str] = None

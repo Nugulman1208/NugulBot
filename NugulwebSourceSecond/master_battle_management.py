@@ -102,6 +102,7 @@ class MasterBattleManagement:
                 elif isinstance(log, list):
                     result_log.extend(log)
 
+            
             api_result = api.make_request("next", data={
                             "comu_id" : comu_id,
                             "server_id" : server_id,
@@ -134,6 +135,9 @@ class MasterBattleManagement:
                 asyncio.run(self.send_websocket_to_discord(st.session_state['battle_room_channel_id'], {"action": "send_message", "message": final_message}))
                 st.session_state['battle_monitoring.next_monster_skill'] = list()
                 st.rerun()
+            
+
+            
 
         if end_battle_button:
             battle_id = battle_data.get('_id')
@@ -316,8 +320,20 @@ class MasterBattleManagement:
             if standard_target_list:
                 target_result = random.choice(standard_target_list)
         
-        elif "me" in target_result:
+        elif "me" == target_result:
             target_result = behavior_dict
+
+        elif selected_skill.get("active_skill_scope_number", 0) > 0:
+            skill_scope_number = min(selected_skill.get("active_skill_scope_number", 0), len(target_list))
+
+            if target_standard == "max" :
+                target_list = sorted(target_list, key = lambda x: x.get(target_column, 0), reverse = True)
+            else:
+                target_list = sorted(target_list, key = lambda x: x.get(target_column, 0), reverse = False)
+
+            target_result = target_list[:skill_scope_number]
+        else:
+            target_result = target_list
 
 
         if isinstance(target_result, dict):
@@ -357,7 +373,7 @@ class MasterBattleManagement:
             target_name = str()
             target_status_list = list()
 
-            for target in target_list:
+            for target in target_result:
                 if "monster_name" in target.keys():
                     target_name = target.get("monster_name")
                 elif "user_name" in target.keys():

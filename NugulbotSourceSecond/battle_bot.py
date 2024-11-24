@@ -81,6 +81,9 @@ class BattleBot(commands.Cog):
         
         for k, v in stat.items():
             formula = formula.replace(k.lower(), str(v))
+
+        if "hate" in formula:
+            formula = formula.replace("hate", stat.get("hate", 0))
             
         return formula
 
