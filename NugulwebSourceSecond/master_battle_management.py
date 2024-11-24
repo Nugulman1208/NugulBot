@@ -102,7 +102,6 @@ class MasterBattleManagement:
                 elif isinstance(log, list):
                     result_log.extend(log)
 
-            
             api_result = api.make_request("next", data={
                             "comu_id" : comu_id,
                             "server_id" : server_id,
@@ -113,8 +112,10 @@ class MasterBattleManagement:
 
             if api_result:
                 final_message = ""
-                for log in result_log:
+                for idx, log in enumerate(result_log):
                     final_message += log.get("action_description")
+                    if idx != len(result_log) -1:
+                        final_message += "========================\n"
 
                 if api_result.get("dot_description", None):
                     final_message += api_result.get("dot_description", None)
@@ -135,9 +136,6 @@ class MasterBattleManagement:
                 asyncio.run(self.send_websocket_to_discord(st.session_state['battle_room_channel_id'], {"action": "send_message", "message": final_message}))
                 st.session_state['battle_monitoring.next_monster_skill'] = list()
                 st.rerun()
-            
-
-            
 
         if end_battle_button:
             battle_id = battle_data.get('_id')
@@ -449,7 +447,7 @@ class MasterBattleManagement:
             dice_result = self.dice(int(dice_count), int(dice_face))
             formula = formula.replace(f"dice({dice_count},{dice_face})", str(dice_result), 1)
         # 최종 수식을 평가하여 숫자로 반환
-        result = eval(formula)
+        result = int(eval(formula))
         return result
 
     def calculate_skill(self, active_skill_data: dict, behavior_calculate: dict, target_calculate : dict, battle_status_data : list = []):
@@ -480,6 +478,12 @@ class MasterBattleManagement:
 
         description = ""
         if skill_type == "attack":
+            hate_of_behavior = target_calculate.get("hate", 0)
+            if hate_of_behavior > 0:
+                old_result = result
+                result = int(result * (1 + (hate_of_behavior // 10) / 10))
+                description += f"[공격 (공격)][헤이트 보정치] 데미지 : {old_result} → {result}\n"
+
             # target_status : defense 반영
             for status in target_status_list:
                 if result <= 0:
@@ -503,6 +507,8 @@ class MasterBattleManagement:
                         description += f"[방어] 데미지 : {org_result} → {result} (잔여 방어막 : {status['status_formula']})\n"
                         status['del_flag'] = True
 
+
+                
             description += "[{skill_name} (공격)][{behavior_name} → {target_name}] 최종 데미지 : {result}\n"
             result_hp = max(target_calculate.get('hp') - result, 0)
             target_calculate['hp'] = result_hp
