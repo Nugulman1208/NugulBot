@@ -190,12 +190,12 @@ class BattleBot(commands.Cog):
             description += "{target_name} 잔여 체력 : " + str(result_hp)
             target_calculate['hp'] = result_hp
         elif skill_type == "heal":
-            description = "[{skill_name} (회복)][{behavior_name} → {target_name}] 최종 회복 : {result}\n"
+            description = "[{skill_name} (회복)][{behavior_name} → {target_name}] 최종 회복 : {result}"
             result_hp = min(target_calculate.get('max_hp'), target_calculate.get('hp') + result)
             description += "{target_name} 잔여 체력 : " + str(result_hp)
             target_calculate['hp'] = result_hp
         elif skill_type == "defense":
-            description = "[{skill_name} (방어)][{behavior_name} → {target_name}] 최종 방어막 : {result} (2턴)\n"
+            description = "[{skill_name} (방어)][{behavior_name} → {target_name}] 최종 방어막 : {result} (2턴)"
         elif skill_type == "increase_hate":
             org_hate = target_calculate.get("hate", 0)
             new_hate = org_hate + result
