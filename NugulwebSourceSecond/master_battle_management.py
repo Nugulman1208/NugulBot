@@ -293,6 +293,10 @@ class MasterBattleManagement:
             if not target_list or "calculate_list" not in target_list.keys():
                 return None
             target_list = target_list.get("calculate_list")
+
+            if target_result.startswith("all") and len(selected_skill.get("active_skill_condition", [])) > 0:
+                active_skill_condition = selected_skill.get("active_skill_condition", [])
+                target_list = [target for target in target_list if target.get("battle_type", "") in active_skill_condition]
         
         
         if target_result.startswith("one"):
@@ -325,7 +329,7 @@ class MasterBattleManagement:
             skill_scope_number = min(selected_skill.get("active_skill_scope_number", 0), len(target_list))
 
             if target_standard == "max" :
-                target_list = sorted(target_list, key = lambda x: x.get(target_column, 0), reverse = True)
+                target_list = sorted(target_list, key = lambda x: (-x.get(target_column, 0), x.get('hp', 0)))
             else:
                 target_list = sorted(target_list, key = lambda x: x.get(target_column, 0), reverse = False)
 

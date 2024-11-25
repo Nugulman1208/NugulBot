@@ -220,7 +220,13 @@ class BattleBot(commands.Cog):
 
     @app_commands.command(name="스킬")
     @app_commands.describe(user_skill_name="사용할 스킬의 이름", selected = "타깃")
-    async def skill(self, interaction: discord.Interaction, user_skill_name: str, selected : str = "auto"):
+    async def skill(self, interaction: discord.Interaction, user_skill_name: str, selected : str):
+        if not user_skill_name:
+            await interaction.followup.send(self.messages['BattleBot.skill.no_user_skill_name'])
+            return
+        if not selected:
+            await interaction.followup.send(self.messages['BattleBot.skill.no_selected'])
+            return
         try:
             await interaction.response.defer()  # 응답을 지연시킴
             send_message_list = []  # 메시지를 저장할 리스트
@@ -268,13 +274,14 @@ class BattleBot(commands.Cog):
                         }
                     }
 
+                    '''
                     battle_log_validate_data = await self.db_manager.find_one_document(session, battle_log_collection_name, battle_log_validate_query)
                     if battle_log_validate_data:
                         await self.db_manager.update_one_document(session, user_calculate_collection_name, user_calculate_query, {'hp' : 0})
                         await interaction.followup.send(self.messages['BattleBot.skill.already_skill_use'])
                         await session.commit_transaction()
                         return
-
+                    '''
                     
 
                     # 배틀 스테이터스를 끌고 온다
@@ -339,8 +346,8 @@ class BattleBot(commands.Cog):
                         target_result_name_list = [target.get(target_name_column) for target in target_data_list]
                         target_result_list = [target for target in target_data_list]
 
-                        if target_type == 'party' and user_active_skill_data.get("active_skill_condition"):
-                            active_skill_condition = user_active_skill_data.get("active_skill_condition")
+                        if target_type == 'party' and selected != "all":
+                            active_skill_condition = selected.split(",")
                             target_result_list = [target for target in target_result_list if target.get("battle_type") in active_skill_condition]
 
                     # (2) 단일
@@ -586,8 +593,21 @@ class BattleBot(commands.Cog):
                         user_calculate_data = await self.db_manager.find_documents(session, user_calculate_collection_name, user_calculate_query)
 
                         return [app_commands.Choice(name=user.get("user_name"), value=user.get("user_name")) for user in user_calculate_data if current.lower() in user.get("user_name").lower()]
-                    elif user_skill.get("active_skill_scope").startswith("all"):
-                        return [app_commands.Choice(name="auto", value="auto")]
+                    elif user_skill.get("active_skill_type", None) in ["heal", "defense"] and user_skill.get("active_skill_scope").startswith("all"):
+                        choice_list = list()
+                        choice_list.append(app_commands.Choice(name="전체", value="all"))
+
+                        choice_list.append(app_commands.Choice(name="힐러", value="heal"))
+                        choice_list.append(app_commands.Choice(name="탱커", value="defense"))
+                        choice_list.append(app_commands.Choice(name="딜러", value="attack"))
+
+                        choice_list.append(app_commands.Choice(name="힐러, 탱커", value="heal,defense"))
+                        choice_list.append(app_commands.Choice(name="힐러, 딜러", value="heal,attack"))
+                        choice_list.append(app_commands.Choice(name="탱커, 딜러", value="defense,attack"))
+
+                        return choice_list
+                    else:
+                        return [app_commands.Choice(name="전체", value="all")]
         except Exception as e:
             print(e)
             return []
