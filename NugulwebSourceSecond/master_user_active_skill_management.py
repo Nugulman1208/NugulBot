@@ -76,8 +76,11 @@ class MasterUserActiveSkillManagement:
             else:
                 for row in selected_row:
                     _id = row.get('_id', None)
+                    send_row = {
+                        "_id" : _id
+                    }
                     if _id:
-                        response = api.make_request(f"{api_path}/{_id}", data=row, method='DELETE')
+                        response = api.make_request(f"{api_path}/{_id}", data=send_row, method='DELETE')
                         if response == None:
                             delete_flag = False
                             break
