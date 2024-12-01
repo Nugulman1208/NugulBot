@@ -195,6 +195,8 @@ class FormRenderer:
                 value = [v for v in value if v in options]
                 if not value:
                     value = []
+            else:
+                value = None
 
             return st.multiselect(label, options, default=value, help=help_text)
 
