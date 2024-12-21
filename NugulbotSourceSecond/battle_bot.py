@@ -327,6 +327,7 @@ class BattleBot(commands.Cog):
                         target_type = "enemy"
                         target_column_prefix = "monster_"
                         target_collection_name = "monster_calculate"
+                        target_query["battle_id"] =  str(battle_data.get("_id"))
                     
                     target_data_list = await self.db_manager.find_documents(session, target_collection_name, target_query)
                     if not target_data_list:
@@ -411,10 +412,10 @@ class BattleBot(commands.Cog):
                             elif "decrease_hate" == active_skill_type:
                                 user_hate = max(0, user_hate - formula_result)
                             else:
-                                user_hate += formula_result // 10
+                                user_hate += round(formula_result / 10)
                         else:
                             if active_skill_type not in ["increase_hate", "decrease_hate"]:
-                                user_hate += formula_result // 10            
+                                user_hate += round(formula_result / 10)            
 
                         battle_log = {
                             "server_id" : server_id,

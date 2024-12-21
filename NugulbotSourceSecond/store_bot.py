@@ -473,6 +473,19 @@ class StoreBot(commands.Cog):
                             await interaction.followup.send(self.messages['BattleBot.use_item.invalid_target'])
                             return
 
+                        log_validation = await self.db_manager.find_one_document(session, "battle_log", {
+                            "server_id": server_id,
+                            "channel_id" : channel_id,
+                            "battle_id" : str(battle_info['_id']),
+                            "current_turn": battle_info['current_turn'],
+                            "action_behavior_user_id" : inventory_validation_data['user_id'],
+                            "action_description": {"$regex": "\\[아이템 사용\\]", "$options": "i"}
+                        })
+
+                        if log_validation:
+                            await interaction.followup.send(self.messages['BattleBot.use_item.already_use_item'])
+                            return
+
                         now = datetime.datetime.now()
                         now = int(now.timestamp() * 1000)
 
@@ -482,6 +495,7 @@ class StoreBot(commands.Cog):
                             "server_id": server_id,
                             "channel_id" : channel_id,
                             "comu_id" : battle_info.get("comu_id"),
+                            "battle_id" : str(battle_info['_id']),
                             "battle_name": battle_info['battle_name'],
                             "current_turn": battle_info['current_turn'],
                             "action_behavior_name": inventory_validation_data['user_name'],

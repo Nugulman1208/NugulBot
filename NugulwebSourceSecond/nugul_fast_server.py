@@ -909,6 +909,7 @@ async def create_battle(form_data: Battle):
             monster_data['hp'] = monster_data['max_hp']
             monster_data.pop('_id')
             monster_data['battle_name'] = send_data['battle_name']
+            monster_data['battle_id'] = str(created_id)
 
             monster_calculate_id = await db_manager.create_one_document(session, "monster_calculate", monster_data)
             if monster_calculate_id:
@@ -948,12 +949,29 @@ async def delete_battle(row_id: str):
 
         monster_calculate_list = await db_manager.update_documents(session, "monster_calculate", {
             "del_flag" : False,
-            "battle_name" : document.get("battle_name")
+            "battle_id" : str(document.get("_id"))
         }, {"del_flag" : True})
 
-        user_update_result = await db_manager.update_documents(session, "user_calculate", {
-            "del_flag" : False
-        }, {"hate" : 0})
+        user_list = await db_manager.find_documents(session, "user_calculate", {
+            "comu_id" : document.get("comu_id")
+        })
+
+        user_update_list = dict()
+
+        for row in user_list:
+            user_id = row.get("_id")
+            max_hp = row.get("max_hp")
+
+            user_update_list[user_id] = {
+                "hp" : max_hp,
+                "hate" : 0
+            }
+
+        for user_id, update_data in user_update_list.items():
+            user_update_result = await db_manager.update_one_document(session, "user_calculate", {
+                "del_flag" : False,
+                "_id" : ObjectId(str(user_id))
+            }, update_data)
 
         # 트랜잭션 커밋
         await session.commit_transaction()
@@ -1059,7 +1077,7 @@ async def go_next_turn(form_data: NextTurnProcess):
                 raise HTTPException(status_code=404, detail="User Master not found")
 
             # 몬스터 정보 찾고
-            monster_master_document = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False})
+            monster_master_document = await db_manager.find_documents(session, "monster_calculate", {"comu_id": comu_id, "del_flag" : False, "battle_id" : str(battle_document.get("_id"))})
             monster_master_document = [monster for monster in monster_master_document if monster.get("monster_name") in battle_document.get("monster_list")]
             if not monster_master_document:
                 raise HTTPException(status_code=404, detail="Monster Master not found")
