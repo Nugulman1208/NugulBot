@@ -158,7 +158,7 @@ class StoreBot(commands.Cog):
                         return
 
                     item_price = item_data['item_price'] * item_count
-                    money_before = calculate_data['money']
+                    money_before = calculate_data.get('money', 0)
 
                     if money_before < item_price:
                         await interaction.followup.send(self.messages['StoreBot.purchase.no_mony'])
@@ -461,8 +461,6 @@ class StoreBot(commands.Cog):
                     target_validation = await self.db_manager.find_one_document(session, target_collection_name, target_query)
 
                     if battle_info is not None:
-
-                        
                         if target_validation is None:
                             target_collection_name = "monster_calculate"
                             action_target_type = "enemy"

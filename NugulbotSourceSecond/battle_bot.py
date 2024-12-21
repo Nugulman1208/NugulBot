@@ -190,7 +190,7 @@ class BattleBot(commands.Cog):
             description += "{target_name} 잔여 체력 : " + str(result_hp)
             target_calculate['hp'] = result_hp
         elif skill_type == "heal":
-            description = "[{skill_name} (회복)][{behavior_name} → {target_name}] 최종 회복 : {result}"
+            description = "[{skill_name} (회복)][{behavior_name} → {target_name}] 최종 회복 : {result}\n"
             result_hp = min(target_calculate.get('max_hp'), target_calculate.get('hp') + result)
             description += "{target_name} 잔여 체력 : " + str(result_hp)
             target_calculate['hp'] = result_hp
@@ -274,14 +274,12 @@ class BattleBot(commands.Cog):
                         }
                     }
 
-                    '''
                     battle_log_validate_data = await self.db_manager.find_one_document(session, battle_log_collection_name, battle_log_validate_query)
                     if battle_log_validate_data:
                         await self.db_manager.update_one_document(session, user_calculate_collection_name, user_calculate_query, {'hp' : 0})
                         await interaction.followup.send(self.messages['BattleBot.skill.already_skill_use'])
                         await session.commit_transaction()
                         return
-                    '''
                     
 
                     # 배틀 스테이터스를 끌고 온다
@@ -538,7 +536,8 @@ class BattleBot(commands.Cog):
                     user_skills = await self.db_manager.find_documents(session, "user_active_skill", {
                         "server_id": server_id,  # server_id로 변경
                         "user_id": user_id,
-                        "active_skill_name": {'$regex': current, "$options": "i"}
+                        "active_skill_name": {'$regex': current, "$options": "i"},
+                        "del_flag" : False
                     })
                     
                     skill_names = [skill["active_skill_name"] for skill in user_skills]
@@ -587,13 +586,13 @@ class BattleBot(commands.Cog):
                             monster_list.append(monster.get("monster_name"))
 
                         return [app_commands.Choice(name=monster_name, value=monster_name) for monster_name in monster_list if current.lower() in monster_name.lower()]
-                    elif user_skill.get("active_skill_type", None) in ["heal", "defense"] and user_skill.get("active_skill_scope").startswith("one"):
+                    elif user_skill.get("active_skill_type", None) in ["heal", "defense", "increase_hate", "decrease_hate"] and user_skill.get("active_skill_scope").startswith("one"):
                         user_calculate_collection_name = "user_calculate"
                         user_calculate_query = {"server_id": server_id, "del_flag" : False, "hp" : {"$gt" : 0}}
                         user_calculate_data = await self.db_manager.find_documents(session, user_calculate_collection_name, user_calculate_query)
 
                         return [app_commands.Choice(name=user.get("user_name"), value=user.get("user_name")) for user in user_calculate_data if current.lower() in user.get("user_name").lower()]
-                    elif user_skill.get("active_skill_type", None) in ["heal", "defense"] and user_skill.get("active_skill_scope").startswith("all"):
+                    elif user_skill.get("active_skill_type", None) in ["heal", "defense", "increase_hate", "decrease_hate"] and user_skill.get("active_skill_scope").startswith("all"):
                         choice_list = list()
                         choice_list.append(app_commands.Choice(name="전체", value="all"))
 

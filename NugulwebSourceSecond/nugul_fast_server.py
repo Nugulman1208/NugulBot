@@ -1039,6 +1039,7 @@ async def go_next_turn(form_data: NextTurnProcess):
 
         # 배틀 정보 찾고
         battle_document = await db_manager.find_one_document(session, "battle", {"comu_id": comu_id, "del_flag" : False, "_id" : ObjectId(battle_id)})
+        print({"comu_id": comu_id, "del_flag" : False, "_id" : ObjectId(battle_id)})
         if not battle_document:
             raise HTTPException(status_code=404, detail="Battle not found")
 
@@ -1276,10 +1277,10 @@ async def go_next_turn(form_data: NextTurnProcess):
             raise HTTPException(status_code=404, detail="User Master not found")
 
         user_description = "========================\n"
-        sorted_hate = sorted(user_master_document, key=lambda x: x["hate"], reverse=True)
+        sorted_hate = sorted(user_master_document, key=lambda x: x.get("hate", 0), reverse=True)
         chunk = "[헤이트 순서]\n"
         for idx, user in enumerate(sorted_hate):
-            chunk += f"{user.get("user_name")} ({user.get("hate")})"
+            chunk += f"{user.get("user_name")} ({user.get("hate", 0)})"
             if idx != len(sorted_hate) -1:
                 chunk += " → "
 
