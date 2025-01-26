@@ -953,7 +953,8 @@ async def delete_battle(row_id: str):
         }, {"del_flag" : True})
 
         user_list = await db_manager.find_documents(session, "user_calculate", {
-            "comu_id" : document.get("comu_id")
+            "comu_id" : document.get("comu_id"),
+            "del_flag" : False
         })
 
         user_update_list = dict()
@@ -968,6 +969,8 @@ async def delete_battle(row_id: str):
             }
 
         for user_id, update_data in user_update_list.items():
+            print(user_id)
+            print(update_data)
             user_update_result = await db_manager.update_one_document(session, "user_calculate", {
                 "del_flag" : False,
                 "_id" : ObjectId(str(user_id))
